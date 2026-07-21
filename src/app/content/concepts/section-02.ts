@@ -377,209 +377,430 @@ try (SyncSession s = new SyncSession()) {
 
   '2.2.1': {
     summary:
-      'Collections hierarchy: Iterable → Collection → (List, Set, Queue); Map වෙනම tree එකක්.',
+      'Collections Framework = data groups තියාගන්න standard interfaces + classes set එකක්. Root එක `Iterable` → `Collection` → (`List`, `Set`, `Queue`). `Map` (key→value) වෙනම tree එකක්.',
     sinhala: [
       {
-        heading: 'Structure එක',
-        body: '`Iterable` හැම එකේම root — for-each support කරනවා. `Collection` යටතේ `List` (ordered, duplicates OK), `Set` (unique), `Queue` (FIFO/priority). `Map` (key→value) `Collection` extend කරන්නෙ නෑ — වෙනම hierarchy එකක්. හරි interface එක තෝරගැනීම performance + correctness එකට වැදගත්.',
+        heading: 'කතාව: arrays මදි වෙන තැන',
+        body: 'Mortar එකට customers ලැයිස්තුවක් තියාගන්න ඕන. Array එකක් (`Customer[]`) use කරන්න පුළුවන් — ඒත් array එකේ size fixed! Customers කී දෙනෙක් එයිද කලින් දන්නෙ නෑ. තව, duplicates ඉවත් කරන්න, key එකකින් හොයන්න, sort කරන්න array එකෙන් අමාරුයි. මේ හැම දේටම Java Collections Framework එක ready-made, powerful data structures දෙනවා — ඕන එකට ගැලපෙන එක තෝරගන්න විතරයි.',
+      },
+      {
+        heading: 'ප්‍රධාන interfaces',
+        body: 'හරි එක තෝරගන්න මේ interfaces තේරුම්ගන්න:',
+        points: [
+          '`List` — ordered, duplicates OK, index එකකින් access (order matters — orders ලැයිස්තුවක් වගේ).',
+          '`Set` — unique elements විතරයි, duplicates automatic ඉවත් (unique emails වගේ).',
+          '`Queue` — FIFO / priority processing (jobs පිළිවෙළට process කරන්න).',
+          '`Map` — key→value pairs (email → customer වගේ lookup). Collection extend කරන්නෙ නෑ — වෙනම hierarchy.',
+        ],
+      },
+      {
+        heading: 'Interface එකට program කරන්න',
+        body: 'රීතිය: variable type එක interface එකෙන් declare කරන්න (`List<X> list = new ArrayList<>()`), concrete class එකෙන් නෙවෙයි. ඒ නිසා පස්සේ implementation එක swap කරන්න පුළුවන් (ArrayList → LinkedList) code එක වෙනස් නොකර. `Iterable` root එක නිසා ඔක්කොම for-each loop support කරනවා.',
       },
     ],
     analogy:
-      'List = numbered queue එකක් (order + duplicates). Set = guest list එකක් (කවුරුත් එක පාරයි). Map = dictionary එකක් (word→meaning).',
+      '`List` = numbered cinema seats (order + duplicates OK — seat 5 දෙපාරක් නෑ, ඒත් තැන් තියෙනවා). `Set` = guest list (කවුරුත් එක පාරයි). `Queue` = bank queue (මුලින් ආපු කෙනා මුලින්). `Map` = dictionary (word → meaning).',
     code: [
       {
-        filename: 'Hierarchy.java',
+        filename: 'CollectionTypes.java',
         language: 'java',
-        code: `List<String> orderIds = new ArrayList<>();     // ordered, duplicates
-Set<String>  uniqueEmails = new HashSet<>();   // no duplicates
-Queue<Runnable> jobs = new LinkedList<>();     // FIFO processing
-Map<String, Customer> byEmail = new HashMap<>(); // key -> value`,
-        note: 'Requirement එකට ගැලපෙන interface එක තෝරන්න.',
+        code: `// requirement එකට ගැලපෙන interface එක තෝරන්න
+List<String>  orderIds    = new ArrayList<>();   // ordered, duplicates OK
+Set<String>   uniqueEmails = new HashSet<>();     // duplicates automatic ඉවත්
+Queue<Runnable> jobs      = new LinkedList<>();   // FIFO processing
+Map<String, Customer> byEmail = new HashMap<>();  // key -> value lookup
+
+uniqueEmails.add("a@x.com");
+uniqueEmails.add("a@x.com");    // දෙවෙනි එක ignore — Set unique
+System.out.println(uniqueEmails.size());  // 1`,
+        note: 'Requirement (order? unique? lookup?) එකට ගැලපෙන interface එක තෝරන්න.',
+      },
+      {
+        filename: 'ProgramToInterface.java',
+        language: 'java',
+        code: `// GOOD: interface type එකෙන් declare -> implementation swap කරන්න පුළුවන්
+List<Customer> customers = new ArrayList<>();
+// පස්සේ: List<Customer> customers = new LinkedList<>();  // code වෙනස් වෙන්නෙ නෑ
+
+// for-each — ඔක්කොම Iterable නිසා වැඩ කරනවා
+for (Customer c : customers) {
+    process(c);
+}`,
+        note: 'Interface එකට program කරන්න — flexible + swappable.',
       },
     ],
     mortar:
-      'Mortar: order IDs `List`, dedup emails `Set`, sync jobs `Queue`, email→customer index `Map`. හරි collection එක තෝරගැනීම millions of records වලදී memory + speed එකට තීරණාත්මකයි.',
+      'Mortar: order ids `List`, dedup emails `Set` (identity resolution), sync jobs `Queue`, email→customer index `Map`. හරි collection interface එක තෝරගැනීම millions of records වලදී memory + speed + correctness තුනටම බලපානවා. Interface එකට program කරන නිසා, profiling වලින් හම්බවෙන bottleneck එකකදී implementation එක swap කරන්න පුළුවන් (ArrayList → different) code එක නොකඩා.',
     keyPoints: [
-      'Iterable → Collection → List/Set/Queue.',
-      'Map වෙනම hierarchy (key→value).',
-      'Interface එකට program කරන්න (`List<>` = new ArrayList).',
+      'Iterable → Collection → List/Set/Queue; Map වෙනම hierarchy.',
+      'List = ordered+duplicates; Set = unique; Queue = FIFO; Map = key→value.',
+      'Interface type එකෙන් declare කරන්න (swappable implementations).',
+      'ඔක්කොම Iterable → for-each support.',
+    ],
+    pitfalls: [
+      'Concrete class type එකෙන් declare කරන එක (`ArrayList<X> x = ...`) — implementation එකට lock වෙනවා. Interface type use කරන්න.',
+      '`Map` එක `Collection` නෙවෙයි — `.add()` නෑ, `.put(key, value)`.',
     ],
   },
 
   '2.2.2': {
     summary:
-      'ArrayList (random access fast), LinkedList (insert/remove fast), Vector (legacy sync), CopyOnWriteArrayList (concurrent reads).',
+      'List implementations: `ArrayList` (dynamic array, random access fast — default), `LinkedList` (ends insert/remove fast), `Vector` (legacy synchronized), `CopyOnWriteArrayList` (read-heavy concurrent).',
     sinhala: [
       {
-        heading: 'List implementations',
-        body: '`ArrayList` = dynamic array, index access O(1), middle insert O(n) — most common. `LinkedList` = doubly-linked nodes, ends insert/remove O(1), index access O(n). `Vector` = synchronized ArrayList (legacy, slow). `CopyOnWriteArrayList` = write එකකදී array එක copy — many-reads/few-writes concurrent scenarios වලට.',
+        heading: 'කතාව: ArrayList ද LinkedList ද?',
+        body: 'Mortar customer grid එකට page එකක customers තියාගන්න List එකක් ඕන. `ArrayList` ද `LinkedList` ද? බොහෝ අය අහන ප්‍රශ්නෙ. උත්තරේ — access pattern එකට depend. ArrayList යටින් array එකක් — index එකකින් access O(1) (super fast), ඒත් මැදට insert කරනකොට elements shift කරන්න ඕන O(n). LinkedList යටින් nodes chain එකක් — ends වලට add/remove O(1), ඒත් index access O(n) (nodes එකින් එක යන්න ඕන).',
+      },
+      {
+        heading: 'හතරේ character',
+        body: 'List implementations 4:',
+        points: [
+          '`ArrayList` — dynamic array. `get(i)` O(1) fast; middle insert/remove O(n). **Default choice** (95% cases).',
+          '`LinkedList` — doubly-linked nodes. ends add/remove O(1); `get(i)` O(n). Queue/Deque වලට හොඳයි.',
+          '`Vector` — ArrayList වගේ ඒත් සියලු methods synchronized (legacy, slow). අලුතෙන් use කරන්න එපා.',
+          '`CopyOnWriteArrayList` — write එකකදී array එක copy කරනවා. many-reads/rare-writes concurrent scenarios වලට (thread-safe).',
+        ],
       },
     ],
     analogy:
-      'ArrayList = seat numbers තියෙන cinema එකක් (කෙලින්ම seat එකට යන්න පුළුවන්). LinkedList = train එකක් (bogies එකින් එකට යන්න ඕන, ඒත් bogey එකක් add/remove ලේසි).',
+      '`ArrayList` = numbered seats cinema එකක් — seat 50ට කෙලින්ම යන්න පුළුවන් (fast index), ඒත් මැදට කෙනෙක් squeeze කරන්න ඉතුරු ඔක්කොම shift වෙන්න ඕන. `LinkedList` = train එකක bogies — bogey එකක් add/remove ලේසි (ends), ඒත් bogey 50ට යන්න එකින් එක ඇවිදින්න ඕන.',
     code: [
       {
         filename: 'Lists.java',
         language: 'java',
-        code: `List<Customer> page = new ArrayList<>();        // fast get(i)
-Queue<Job> pipeline = new LinkedList<>();       // fast add/remove ends
+        code: `// ArrayList — random access fast (default choice)
+List<Customer> page = new ArrayList<>();
+Customer c = page.get(5);                 // O(1) — super fast
 
-// read-heavy shared config, rare writes
-List<String> activeConnectors = new CopyOnWriteArrayList<>();`,
-        note: 'Access pattern එක අනුව implementation එක තෝරන්න.',
+// LinkedList — ends add/remove fast (queue/deque වගේ)
+Deque<Job> pipeline = new LinkedList<>();
+pipeline.addFirst(new Job());             // O(1)
+pipeline.removeLast();                    // O(1)`,
+        note: 'Access pattern එකට implementation එක තෝරන්න — index? → ArrayList; ends? → LinkedList.',
+      },
+      {
+        filename: 'ConcurrentList.java',
+        language: 'java',
+        code: `// read-heavy, rare writes, multiple threads -> CopyOnWriteArrayList
+List<String> activeConnectors = new CopyOnWriteArrayList<>();
+
+// reader threads ගොඩක් safe (lock නෑ); write කලාම array copy වෙනවා
+activeConnectors.add("shopify");    // rare write (copies internally)
+for (String c : activeConnectors) { // many concurrent reads — safe
+    ping(c);
+}`,
+        note: 'Read-heavy concurrent config → CopyOnWriteArrayList; Vector avoid.',
       },
     ],
     mortar:
-      'Mortar customer grid pagination → `ArrayList` (index access). Sync job pipeline → `LinkedList` (queue). Rarely-changing shared "active connectors" list, many reader threads → `CopyOnWriteArrayList`. Vector අලුතෙන් පාවිච්චි කරන්නෙ නෑ.',
+      'Mortar customer grid pagination → `ArrayList` (index access, iteration). Sync job pipeline → `LinkedList`/`ArrayDeque` (queue operations). Rarely-changing shared "active connectors" list, reader threads ගොඩක් → `CopyOnWriteArrayList`. Millions of rows වලදී ArrayList එකේ initial capacity set කිරීම (resizing අඩු කරන්න) performance tuning එකක්. Vector legacy — අලුතෙන් නෑ.',
     keyPoints: [
-      'ArrayList: fast random access, default choice.',
-      'LinkedList: fast end insert/remove, slow index.',
-      'CopyOnWriteArrayList: concurrent read-heavy; Vector: legacy.',
+      'ArrayList = fast random access, default choice.',
+      'LinkedList = fast ends add/remove, slow index access.',
+      'CopyOnWriteArrayList = read-heavy concurrent; Vector = legacy (avoid).',
+      'Access pattern (index vs ends) අනුව තෝරන්න.',
+    ],
+    pitfalls: [
+      'LinkedList එකේ `get(i)` loop එකක use කරන එක O(n²) — random access ඕන නම් ArrayList.',
+      'ArrayList එකට වැඩ ගොඩක් add කරනකොට internal resizing වෙනවා — size දන්නවා නම් `new ArrayList<>(capacity)`.',
     ],
   },
 
   '2.2.3': {
     summary:
-      'HashSet (unordered, fast), LinkedHashSet (insertion order), TreeSet (sorted). Comparable vs Comparator ordering define කරනවා.',
+      'Set implementations: `HashSet` (fast, unordered), `LinkedHashSet` (insertion order), `TreeSet` (sorted). Sorting එකට elements `Comparable` (natural order) වෙන්න ඕන, නැත්නම් `Comparator` (custom) දෙන්න ඕන.',
     sinhala: [
       {
-        heading: 'Set implementations + ordering',
-        body: '`HashSet` fast O(1) but no order. `LinkedHashSet` insertion order තියාගන්නවා. `TreeSet` sorted (red-black tree, O(log n)). Sorting එකට elements `Comparable` (natural order, `compareTo`) වෙන්න ඕන, නැත්නම් `Comparator` (custom order) දෙන්න ඕන.',
+        heading: 'කතාව: duplicate emails ඉවත් කරන්න',
+        body: 'Mortar identity resolution එකේ දැනටමත් දැකපු emails track කරලා duplicates ඉවත් කරන්න ඕන. `Set` එකක් perfect — duplicates automatic reject. ඒත් Set implementation 3ක් තියෙනවා, order behaviour එක වෙනස්. HashSet fast ඒත් order නෑ; insertion order ඕන නම් LinkedHashSet; sorted ඕන නම් TreeSet.',
+      },
+      {
+        heading: 'තුනේ වෙනස',
+        body: 'Set implementations 3:',
+        points: [
+          '`HashSet` — hashing මත. `add`/`contains` O(1) average, **fastest**. Order **නෑ** (කිසි guarantee එකක් නෑ).',
+          '`LinkedHashSet` — HashSet + insertion order තියාගන්නවා. ටිකක් slow, ඒත් predictable order.',
+          '`TreeSet` — red-black tree, elements **sorted**. O(log n). natural order හෝ Comparator එකට අනුව.',
+          'HashSet/TreeSet එකේ elements හරි `equals`/`hashCode` (HashSet) හෝ `compareTo`/Comparator (TreeSet) ඕන.',
+        ],
+      },
+      {
+        heading: 'Comparable vs Comparator',
+        body: 'Sorting කරන්න order එකක් ඕන. `Comparable` — class එකේම `compareTo()` (natural/default order — "මම මාවම compare කරන හැටි"). `Comparator` — වෙනම object එකක් (custom order — "මේ විදිහට compare කරන්න"). Comparator එකකින් එකම data වෙන වෙන විදිහට sort කරන්න පුළුවන් (spend අනුව, name අනුව...).',
       },
     ],
     analogy:
-      'HashSet = බෑග් එකකට දාපු unique බඩු (order නෑ). TreeSet = alphabetical order එකට තියපු පොත් රාක්කයක්.',
+      '`HashSet` = බෑග් එකකට දාපු unique බඩු (order නෑ, ඉක්මනට හොයන්න පුළුවන්). `LinkedHashSet` = දාපු පිළිවෙළට තියෙන unique බඩු. `TreeSet` = alphabetical order එකට තියපු පොත් රාක්කයක් (හැමවිටම sorted).',
     code: [
       {
         filename: 'Sets.java',
         language: 'java',
-        code: `Set<String> unique = new HashSet<>();                 // fast, no order
-Set<String> ordered = new LinkedHashSet<>();          // insertion order
+        code: `Set<String> seen = new HashSet<>();          // fast dedup, no order
+seen.add("a@x.com");
+seen.add("a@x.com");                          // ignore (duplicate)
+System.out.println(seen.size());             // 1
 
-// TreeSet sorted by a Comparator (top spenders first)
+Set<String> ordered = new LinkedHashSet<>(); // insertion order තියාගන්නවා
+ordered.add("shopify"); ordered.add("klaviyo");
+// iterate -> shopify, klaviyo (දාපු පිළිවෙළට)`,
+        note: 'HashSet = fast dedup; LinkedHashSet = order preserved.',
+      },
+      {
+        filename: 'TreeSetSorted.java',
+        language: 'java',
+        code: `// TreeSet — Comparator එකකින් top spenders මුලින්
 Set<Customer> topSpenders = new TreeSet<>(
-    Comparator.comparingDouble(Customer::getTotalSpend).reversed());`,
-        note: 'TreeSet එකට Comparable elements හෝ Comparator එකක් ඕන.',
+    Comparator.comparingDouble(Customer::getTotalSpend).reversed()
+);
+topSpenders.add(new Customer("a@x.com", 500));
+topSpenders.add(new Customer("b@x.com", 1200));
+// iterate -> b (1200), a (500)  — හැමවිටම sorted`,
+        note: 'TreeSet + Comparator = always-sorted set.',
+      },
+      {
+        filename: 'ComparableVsComparator.java',
+        language: 'java',
+        code: `// Comparable — class එකේම natural order
+class Customer implements Comparable<Customer> {
+    double spend;
+    public int compareTo(Customer o) {           // "මම compare වෙන හැටි"
+        return Double.compare(this.spend, o.spend);
+    }
+}
+
+// Comparator — custom order (external, reusable)
+Comparator<Customer> byEmail = Comparator.comparing(c -> c.email);`,
+        note: 'Comparable = natural (compareTo); Comparator = custom/external.',
       },
     ],
     mortar:
-      'Mortar identity resolution වලදී already-seen emails `HashSet` එකේ තියාගෙන duplicates ඉවත් කරනවා. Segment analytics වල top-spenders sorted විදිහට ඕන නම් `TreeSet` + `Comparator`. UI order preserve කරන්න `LinkedHashSet`.',
+      'Mortar identity resolution වලදී already-seen emails `HashSet` එකේ තියාගෙන duplicates O(1) ඉවත් කරනවා (millions of records — fast dedup critical). Segment analytics වල "top spenders sorted" ඕන නම් `TreeSet` + `Comparator`. UI display order preserve කරන්න `LinkedHashSet`. `equals`/`hashCode` හරි නැත්නම් dedup break වෙනවා (2.2.5).',
     keyPoints: [
-      'HashSet fast/unordered; LinkedHashSet insertion-order; TreeSet sorted.',
-      'Comparable = natural order (compareTo); Comparator = custom.',
-      'TreeSet/HashSet elements හරි `equals`/`hashCode`/`compareTo` ඕන.',
+      'HashSet = fast/unordered; LinkedHashSet = insertion-order; TreeSet = sorted.',
+      'Comparable = natural order (`compareTo`); Comparator = custom order.',
+      'HashSet elements → `equals`/`hashCode`; TreeSet → `compareTo`/Comparator.',
+      'Dedup වලට HashSet default (O(1)).',
+    ],
+    pitfalls: [
+      'TreeSet එකට Comparable නැති elements, Comparator එකකුත් නැතුව දැම්මොත් `ClassCastException` (runtime).',
+      'HashSet element එකක field එකක් (hashCode එකට use වෙන) පස්සේ වෙනස් කලොත් — element එක "නැති" වෙනවා.',
     ],
   },
 
   '2.2.4': {
     summary:
-      'HashMap (fast, unordered), LinkedHashMap (order), TreeMap (sorted keys), ConcurrentHashMap (thread-safe).',
+      'Map implementations: `HashMap` (fast, unordered — default), `LinkedHashMap` (order/LRU), `TreeMap` (sorted keys), `ConcurrentHashMap` (thread-safe, scalable).',
     sinhala: [
       {
-        heading: 'Map implementations',
-        body: '`HashMap` = O(1) average, no order, null key OK, not thread-safe. `LinkedHashMap` = insertion/access order (LRU cache වලට හොඳයි). `TreeMap` = keys sorted, O(log n). `ConcurrentHashMap` = thread-safe, high-concurrency (segment/bucket-level locking), null key/value බෑ.',
+        heading: 'කතාව: email එකෙන් customer කෙනෙක් හොයන්න',
+        body: 'Mortar identity resolution එකේ email එකක් දුන්නම ඒ customer කෙනෙක්ගේ golden record එක ඉක්මනට හොයාගන්න ඕන (millions අතරින්). List එකක loop කරොත් O(n) — මිලියනයක් නම් අති slow. `Map<email, Customer>` එකක් නම් O(1) lookup — instant. මේකයි Map එකේ බලය: key එකකින් value එකක් ඉක්මනට.',
+      },
+      {
+        heading: 'හතරේ character',
+        body: 'Map implementations 4:',
+        points: [
+          '`HashMap` — hashing මත. get/put O(1) average. Order **නෑ**. null key/value OK. Not thread-safe. **Default**.',
+          '`LinkedHashMap` — HashMap + order (insertion හෝ access order). Access-order mode එකෙන් **LRU cache** හදන්න පුළුවන්.',
+          '`TreeMap` — keys **sorted** (red-black tree). O(log n). Range queries (`headMap`, `tailMap`) වලට.',
+          '`ConcurrentHashMap` — thread-safe, high-concurrency (bucket-level locking, full-map lock නෑ). null key/value **බෑ**.',
+        ],
       },
     ],
     analogy:
-      'HashMap = සාමාන්‍ය dictionary. TreeMap = alphabetical dictionary. ConcurrentHashMap = ගොඩක් අය එකවර පාවිච්චි කරන shared dictionary එකක් (safe).',
+      '`HashMap` = සාමාන්‍ය dictionary (word → meaning, ඉක්මන්). `TreeMap` = alphabetical dictionary (හැමවිටම sorted). `ConcurrentHashMap` = ගොඩක් අය එකවර පාවිච්චි කරන shared dictionary එකක් (safe, කැඩෙන්නෙ නෑ). `LinkedHashMap` = "recently used" tab එකක් තියෙන dictionary (LRU).',
     code: [
       {
         filename: 'Maps.java',
         language: 'java',
-        code: `Map<String, Customer> index = new HashMap<>();          // fast lookup
-Map<String, Integer> recentAccess = new LinkedHashMap<>(); // order/LRU
+        code: `// HashMap — O(1) lookup (default)
+Map<String, Customer> index = new HashMap<>();
+index.put("a@x.com", customer);
+Customer c = index.get("a@x.com");   // O(1) — instant
 
-// shared counter updated by many sync threads
+// TreeMap — sorted keys (date -> metric reports)
+Map<LocalDate, Double> revenue = new TreeMap<>();
+// keys automatically date order එකෙන් sorted`,
+        note: 'email→customer index = HashMap (O(1) lookup); sorted reports = TreeMap.',
+      },
+      {
+        filename: 'ConcurrentMap.java',
+        language: 'java',
+        code: `// multiple sync threads counters update කරනවා -> ConcurrentHashMap
 Map<String, Long> counts = new ConcurrentHashMap<>();
-counts.merge("shopify", 1L, Long::sum);`,
-        note: 'Concurrent updates ඕන නම් ConcurrentHashMap.',
+
+// merge = atomic (thread-safe increment)
+counts.merge("shopify", 1L, Long::sum);   // safe from many threads
+counts.merge("shopify", 1L, Long::sum);   // -> 2, race condition නෑ`,
+        note: 'Concurrent updates → ConcurrentHashMap (+ atomic merge/compute).',
+      },
+      {
+        filename: 'LruCache.java',
+        language: 'java',
+        code: `// LinkedHashMap access-order + removeEldestEntry = simple LRU cache
+Map<String, Product> cache = new LinkedHashMap<>(16, 0.75f, true) {
+    protected boolean removeEldestEntry(Map.Entry<String, Product> e) {
+        return size() > 1000;    // 1000ට වඩා වුනොත් oldest එක ඉවත්
+    }
+};`,
+        note: 'LinkedHashMap (access-order) → LRU cache (9.3.3).',
       },
     ],
     mortar:
-      'Mortar identity index (email→golden record) = `HashMap` single-thread build එකකදී. Multi-threaded sync counters = `ConcurrentHashMap` (`merge` atomic). Sorted reports (date→metric) = `TreeMap`.',
+      'Mortar identity index (email→golden record) single-thread build එකකදී `HashMap` (O(1) lookup, millions). Multi-threaded sync counters → `ConcurrentHashMap` (`merge` atomic, race conditions නෑ). Sorted reports (date→metric) → `TreeMap`. Recommendation/segment caches → `LinkedHashMap` LRU (9.3). හරි Map එක තෝරගැනීම lookup performance + thread-safety දෙකටම තීරණාත්මකයි.',
     keyPoints: [
-      'HashMap default; LinkedHashMap ordered/LRU; TreeMap sorted keys.',
-      'ConcurrentHashMap = thread-safe, scalable (no full-map lock).',
+      'HashMap = O(1), default; LinkedHashMap = ordered/LRU; TreeMap = sorted keys.',
+      'ConcurrentHashMap = thread-safe, scalable (bucket-level locking).',
       'ConcurrentHashMap null key/value allow කරන්නෙ නෑ.',
+      'key එකෙන් value lookup O(1) — List loop (O(n)) වලට වඩා දරාමට හොඳයි.',
+    ],
+    pitfalls: [
+      'HashMap multi-thread එකකින් concurrent modify කරොත් corruption/infinite loop — concurrent access නම් `ConcurrentHashMap`.',
+      'HashMap key එකේ `equals`/`hashCode` හරි නැත්නම් lookups fail (2.2.5).',
     ],
   },
 
   '2.2.5': {
     summary:
-      'HashMap internals: hashCode → bucket index; collisions linked-list, Java 8+ එකේ bucket එකක් 8+ වුනොත් balanced tree එකක් වෙනවා (treeification).',
+      'HashMap internally: key එකේ `hashCode()` → bucket (array slot); collisions → linked list chain; Java 8+ එකේ bucket එකක 8+ nodes → balanced tree (treeification, O(n)→O(log n)). `equals`/`hashCode` contract critical.',
     sinhala: [
       {
-        heading: 'ඇතුලෙ වෙන්නේ',
-        body: 'Key එකේ `hashCode()` එකෙන් bucket (array slot) index එකක් ගණනය කරනවා. එකම bucket එකට keys කිහිපයක් ආවොත් (collision) — linked list එකක් විදිහට chain වෙනවා. Java 8 වලින්, bucket එකක nodes 8+ (සහ capacity ≥64) වුනොත් ඒක red-black tree එකක් වෙනවා (O(n) → O(log n)). හරි `hashCode`/`equals` නැත්නම් lookups කැඩෙනවා.',
+        heading: 'කතාව: O(1) lookup එක ඇත්තටම වැඩ කරන්නේ කොහොමද?',
+        body: 'HashMap එක O(1) lookup දෙනවා කිව්වා (2.2.4). ඒත් millions of keys අතරින් එකක් instant හොයාගන්නේ කොහොමද? මේ internal magic එක තේරුම්ගැනීම — interviews වලට, සහ custom objects keys විදිහට use කරනකොට bugs වළක්වන්න — අත්‍යවශ්‍යයි. Mortar identity resolution එකේ Customer/email keys HashMap එකේ නිසා මේක practically වැදගත්.',
+      },
+      {
+        heading: 'ඇතුලෙ වෙන්නේ (steps)',
+        body: 'HashMap එකක `put(key, value)` වෙන විදිහ:',
+        points: [
+          'key එකේ `hashCode()` call කරලා number එකක් ගන්නවා.',
+          'ඒ hash එකෙන් bucket (internal array slot) index එකක් ගණනය කරනවා.',
+          'ඒ bucket එකට keys කිහිපයක් ආවොත් (collision) — linked list එකක් විදිහට chain වෙනවා.',
+          'Java 8+: bucket එකක nodes 8+ (සහ capacity ≥64) වුනොත් — linked list එක red-black **tree** එකක් වෙනවා (lookup O(n)→O(log n)).',
+        ],
+      },
+      {
+        heading: 'equals/hashCode contract',
+        body: 'Custom object එකක් key විදිහට use කරනවා නම් **`equals` සහ `hashCode` දෙකම override කරන්නම ඕන**, contract එකට අනුව: (1) `equals` true නම් `hashCode` සමාන වෙන්නම ඕන. (2) `hashCode` සමාන වුනාට `equals` සමාන වෙන්න ඕන නෑ (collision OK). මේ contract break කලොත් — key එක put කරලා get කරද්දී "නැති" වෙනවා (wrong bucket).',
       },
     ],
     analogy:
-      'ලොකු library එකක shelves (buckets). හැම පොතක්ම hashCode අනුව හරි shelf එකට. එකම shelf එකේ පොත් ගොඩක් වුනොත් — index කරපු sub-catalog එකක් (tree) හදනවා, ඉක්මනට හොයන්න.',
+      'ලොකු library එකක shelves (buckets). හැම පොතක්ම hashCode අනුව හරි shelf එකට යනවා. එකම shelf එකට පොත් ගොඩක් ආවොත් (collision) — ඒ shelf එකේ තවත් organize කරනවා (Java 8 tree). හරි shelf number (hashCode) නැත්නම් පොත හොයාගන්න බෑ.',
     code: [
       {
-        filename: 'HashMapInternals.java',
+        filename: 'HashMapKey.java',
         language: 'java',
-        code: `// equals + hashCode MUST agree for correct bucketing
-class Customer {
+        code: `class Customer {
     private final String email;
     Customer(String email) { this.email = email; }
 
+    // equals + hashCode දෙකම override — HashMap key එකට අත්‍යවශ්‍යයි
     @Override public boolean equals(Object o) {
         return o instanceof Customer c && email.equals(c.email);
     }
-    @Override public int hashCode() { return email.hashCode(); }
+    @Override public int hashCode() {
+        return email.hashCode();     // equals true නම් hashCode සමාන (contract)
+    }
 }
 
 Map<Customer, Integer> spend = new HashMap<>();
 spend.put(new Customer("a@x.com"), 100);
-spend.get(new Customer("a@x.com")); // 100 - found via hashCode+equals`,
-        note: 'equals true නම් hashCode සමාන වෙන්නම ඕන — නැත්නම් map break.',
+Integer s = spend.get(new Customer("a@x.com"));  // 100 — hashCode+equals නිසා හම්බවෙනවා`,
+        note: 'equals true ⇒ hashCode සමාන — නැත්නම් key එක "නැති" වෙනවා.',
+      },
+      {
+        filename: 'BrokenContract.java',
+        language: 'java',
+        code: `class Bad {
+    String id;
+    // equals override කරා, ඒත් hashCode නෑ! -> contract broken
+    @Override public boolean equals(Object o) { /* compares id */ return true; }
+    // hashCode default (Object) -> වෙන වෙන hashCode -> වෙන bucket
+}
+
+Map<Bad, String> m = new HashMap<>();
+m.put(new Bad(), "x");
+m.get(new Bad());   // null! (equals same, ඒත් hashCode වෙනස් -> wrong bucket)`,
+        note: 'equals override කරාම hashCode ත් override කරන්නම ඕන — නැත්නම් lookups fail.',
       },
     ],
     mortar:
-      'Mortar identity resolution හදන email→golden-record `HashMap` එකේ key එක Customer/email. Custom `equals`/`hashCode` හරි නැත්නම් duplicate customers "not found" වෙලා dedup break වෙනවා — මේ internal knowledge එක එතනදී තීරණාත්මකයි.',
+      'Mortar identity resolution හදන email→golden-record `HashMap`/`HashSet` වල key එක Customer/email. Custom `equals`/`hashCode` හරි නැත්නම් — duplicate customers "not found" වෙලා dedup break වෙනවා (එකම customer කිහිප වතාවක් store වෙනවා). මේ internal knowledge එක එතනදී තීරණාත්මකයි. Java 8 treeification නිසා hash collisions ගොඩක් තිබුණත් lookup O(log n) — resilient.',
     keyPoints: [
-      'hashCode → bucket; collision → chain; Java 8 treeify (8+ nodes).',
-      'equals true ⇒ hashCode සමාන (contract).',
-      'Poor hashCode = all one bucket = O(n) lookups.',
+      'hashCode → bucket; collision → chain; Java 8 treeify (8+ nodes → O(log n)).',
+      'equals true ⇒ hashCode සමාන වෙන්නම ඕන (contract).',
+      'Custom object key → equals + hashCode දෙකම override.',
+      'Poor hashCode (හැම එකටම එකම value) = all one bucket = O(n).',
     ],
     pitfalls: [
-      'Mutable key එකක field එක put කලාට පස්සේ වෙනස් කලොත් — key එක "නැති" වෙනවා.',
+      'equals override කරලා hashCode override නොකරන එක — #1 HashMap bug (keys "නැති" වෙනවා).',
+      'Mutable key එකක field එකක් (hashCode එකට use වෙන) put කරලා පස්සේ වෙනස් කලොත් — key එක lost.',
     ],
   },
 
   '2.2.6': {
     summary:
-      'Fail-fast iterators (ArrayList/HashMap) modification එකකදී ConcurrentModificationException; fail-safe (CopyOnWrite/Concurrent) snapshot එකක් මත වැඩ කරනවා.',
+      'Fail-fast iterators (`ArrayList`, `HashMap`) iterate කරද්දී structurally modify වුනොත් `ConcurrentModificationException` විසි කරනවා. Fail-safe (`CopyOnWriteArrayList`, `ConcurrentHashMap`) snapshot එකක් මත වැඩ කරන නිසා exception නෑ.',
     sinhala: [
       {
+        heading: 'කතාව: loop එකක් ඇතුලේ remove කරද්දී crash',
+        body: 'ඔයා customer list එකක් iterate කරමින්, condition එකකට ගැලපෙන ඒවා remove කරන්න හදනවා — `for (Customer c : list) { if (...) list.remove(c); }`. Crash! `ConcurrentModificationException`. ඇයි? ArrayList/HashMap වගේ collections "fail-fast" — iterate කරද්දී collection එක structurally වෙනස් වුනොත් (add/remove), වහාම error විසි කරනවා (silent corruption එකකට වඩා fail-fast හොඳයි කියන අදහසින්).',
+      },
+      {
         heading: 'දෙකේ හැසිරීම',
-        body: 'Fail-fast iterators collection එක iterate කරනකොට structurally modify වුනොත් (add/remove) වහාම `ConcurrentModificationException` විසි කරනවා (modCount check). Fail-safe iterators underlying data එකේ copy/snapshot එකක් මත වැඩ කරන නිසා exception එකක් නෑ, ඒත් latest changes පේන්නෙ නෑ.',
+        body: 'Iterator වර්ග දෙක:',
+        points: [
+          'Fail-fast (ArrayList, HashMap, HashSet): iterate කරද්දී structural modify → `ConcurrentModificationException` වහාම (internal `modCount` check).',
+          'Fail-safe (CopyOnWriteArrayList, ConcurrentHashMap): underlying data එකේ copy/snapshot එකක් මත iterate — exception නෑ, ඒත් iteration එකේදී වුණ changes නොපෙනේ.',
+          'Fail-fast = best-effort detection (guarantee නෙවෙයි) — bugs ඉක්මනට අල්ලන්න.',
+          'විසඳුම: loop-modify එකට `Iterator.remove()`, `removeIf()`, හෝ concurrent collections.',
+        ],
       },
     ],
     analogy:
-      'Fail-fast = කවුරු හරි ඔයා ගණන් කරන ලැයිස්තුව මැද්දෙ වෙනස් කලොත් "නවත්තන්න!" කියලා error එකක්. Fail-safe = ලැයිස්තුවේ photocopy එකක් අරන් ගණන් කරනවා (වෙනස්කම් නොපෙනී).',
+      'Fail-fast = කවුරු හරි ඔයා ගණන් කරන ලැයිස්තුව මැද්දෙ item එකක් add/remove කලොත් "නවත්තන්න! ලැයිස්තුව වෙනස් වුණා!" කියලා error එකක් (data corruption වෙනවට වඩා). Fail-safe = ලැයිස්තුවේ photocopy එකක් අරන් ගණන් කරනවා (වෙනස්කම් නොදැනී, ඒත් safe).',
     code: [
       {
-        filename: 'Iterators.java',
+        filename: 'FailFast.java',
         language: 'java',
         code: `List<String> ids = new ArrayList<>(List.of("a", "b", "c"));
 
-// fail-fast:  ConcurrentModificationException
-// for (String id : ids) if (id.equals("b")) ids.remove(id);
+// BAD: for-each ඇතුලේ remove -> ConcurrentModificationException
+// for (String id : ids) {
+//     if (id.equals("b")) ids.remove(id);   //  crash!
+// }
 
-// correct: use iterator.remove()
+// GOOD 1: Iterator.remove()
 Iterator<String> it = ids.iterator();
-while (it.hasNext()) if (it.next().equals("b")) it.remove();`,
-        note: 'Loop එකේදී remove කරන්න iterator.remove() පාවිච්චි කරන්න.',
+while (it.hasNext()) {
+    if (it.next().equals("b")) it.remove();   // ✅ safe
+}
+
+// GOOD 2: removeIf (cleanest)
+ids.removeIf(id -> id.equals("b"));           // ✅ safe`,
+        note: 'Loop-modify එකට Iterator.remove() හෝ removeIf() — for-each remove නෙවෙයි.',
+      },
+      {
+        filename: 'FailSafe.java',
+        language: 'java',
+        code: `// concurrent — වෙන threads modify කරද්දීත් iterate safe (snapshot)
+List<String> connectors = new CopyOnWriteArrayList<>(List.of("shopify"));
+
+for (String c : connectors) {
+    connectors.add("klaviyo");   // exception නෑ! (ඒත් මේ loop එකට "klaviyo" පේන්නෙ නෑ)
+}`,
+        note: 'Fail-safe = snapshot මත iterate — CME නෑ, ඒත් latest changes නොපෙනේ.',
       },
     ],
     mortar:
-      'Mortar sync scheduler එකක් active-jobs list එක iterate කරනකොට වෙන thread එකක් job එකක් add කලොත් fail-fast crash එකක්. ඒ නිසා shared, concurrently-modified collections වලට `ConcurrentHashMap`/`CopyOnWriteArrayList` (fail-safe) පාවිච්චි කරනවා.',
+      'Mortar sync scheduler එකක් active-jobs list එක iterate කරද්දී වෙන thread එකක් job එකක් add කලොත් — plain ArrayList නම් fail-fast crash. ඒ නිසා shared, concurrently-modified collections වලට `ConcurrentHashMap`/`CopyOnWriteArrayList` (fail-safe). Single-thread batch processing එකේ loop-modify වලට `removeIf()` — clean + safe. මේ දැනුම production concurrency bugs වළක්වනවා.',
     keyPoints: [
-      'Fail-fast = modCount check → CME (ArrayList, HashMap).',
-      'Fail-safe = snapshot/copy → no CME (Concurrent, CopyOnWrite).',
-      'Loop-modify එකට `iterator.remove()` හෝ concurrent collections.',
+      'Fail-fast = modCount check → `ConcurrentModificationException` (ArrayList, HashMap).',
+      'Fail-safe = snapshot/copy → CME නෑ (CopyOnWrite, Concurrent collections).',
+      'Loop-modify → `Iterator.remove()` / `removeIf()` / concurrent collections.',
+      'Fail-fast = best-effort (bugs early), guarantee නෙවෙයි.',
+    ],
+    pitfalls: [
+      'for-each loop ඇතුලේ collection එකේ add/remove — classic ConcurrentModificationException.',
+      'Fail-safe iteration එකේදී වුණ changes ඒ iteration එකට නොපෙනේ — "stale" data වෙන්න පුළුවන්.',
     ],
   },
 
