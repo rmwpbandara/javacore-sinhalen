@@ -4,243 +4,486 @@ import { Concept } from '../../core/models/roadmap.model';
 export const SECTION_03: Record<string, Concept> = {
   '3.1.1': {
     summary:
-      'Functional interface = abstract method එකක් විතරක් තියෙන interface (Predicate, Function, Supplier, Consumer). Lambda වලට base එක.',
+      'Functional interface = abstract method **එකක් විතරක්** තියෙන interface (SAM — Single Abstract Method). Lambda expressions වලට පදනම. Built-in ඒවා: `Predicate`, `Function`, `Supplier`, `Consumer`.',
     sinhala: [
       {
-        heading: 'Single abstract method',
-        body: 'Functional interface එකකට abstract method එකයි විතරයි (SAM). `@FunctionalInterface` annotation එකෙන් compiler verify කරනවා. Built-in ඒවා: `Predicate<T>` (T→boolean), `Function<T,R>` (T→R), `Supplier<T>` (→T), `Consumer<T>` (T→void). මේවා lambda/method reference වලින් implement කරනවා.',
+        heading: 'කතාව: behaviour එකක් "pass" කරන්නද?',
+        body: 'Mortar segment builder එකට filter rules දාන්න ඕන — "spend > 1000", "country == LK". මේ rules කියන්නේ behaviour කෑලි (customer කෙනෙක් ගැලපෙනවද කියලා check කරන logic). Java වල methods කෙලින්ම variables විදිහට pass කරන්න බෑ (objects විතරයි pass කරන්නේ). ඉතින් behaviour එකක් pass කරන්නේ කොහොමද? විසඳුම — abstract method එකක් විතරක් තියෙන interface එකක් (functional interface), lambda එකකින් implement කරලා. ඒක object එකක් වගේ pass කරන්න පුළුවන්.',
+      },
+      {
+        heading: 'SAM + built-in functional interfaces',
+        body: 'Functional interface = abstract method එකයි විතරයි. `@FunctionalInterface` annotation එකෙන් compiler verify කරනවා. `java.util.function` වල built-in ඒවා:',
+        points: [
+          '`Predicate<T>` — `T → boolean` ("මේක ගැලපෙනවද?" — filters).',
+          '`Function<T,R>` — `T → R` (transform — customer → email).',
+          '`Supplier<T>` — `() → T` (value එකක් produce කරනවා — `Instant::now`).',
+          '`Consumer<T>` — `T → void` (value එකක් use කරනවා — send email).',
+          '`BiFunction`, `UnaryOperator`, `BinaryOperator` වගේ තවත් තියෙනවා.',
+        ],
       },
     ],
     analogy:
-      'එක වැඩක් විතරක් කරන tool එකක් වගේ — Predicate = "මේක ගැලපෙනවද?" කියලා yes/no දෙන filter එකක්.',
+      'එක වැඩක් විතරක් කරන tool එකක් වගේ. `Predicate` = "yes/no දෙන" filter එකක් ("මේ customer VIP ද?"). `Function` = "එකක් දීලා තව එකක් හදන" machine එකක් (customer → email). Tool එකට එක job එකයි — ඒ නිසා lambda එකකින් fill කරන්න පුළුවන්.',
     code: [
       {
         filename: 'FunctionalInterfaces.java',
         language: 'java',
-        code: `Predicate<Customer> isVip     = c -> c.getTotalSpend() > 1000;
-Function<Customer, String> email = Customer::getEmail;
-Supplier<Instant> now         = Instant::now;
-Consumer<Customer> notify     = c -> send(c.getEmail());
+        code: `// built-in functional interfaces — lambda වලින් implement
+Predicate<Customer> isVip  = c -> c.getTotalSpend() > 1000;   // T -> boolean
+Function<Customer, String> toEmail = Customer::getEmail;       // T -> R
+Supplier<Instant> now      = Instant::now;                     // () -> T
+Consumer<Customer> notify  = c -> send(c.getEmail());          // T -> void
 
-if (isVip.test(alice)) notify.accept(alice);`,
-        note: 'හැම එකක්ම abstract method එකයි — lambda වලින් fill කරනවා.',
+// use කරනවා
+if (isVip.test(alice)) {          // Predicate.test
+    notify.accept(alice);          // Consumer.accept
+}
+String email = toEmail.apply(alice);  // Function.apply`,
+        note: 'හැම එකකම abstract method එකයි (test/apply/get/accept).',
+      },
+      {
+        filename: 'CustomFunctional.java',
+        language: 'java',
+        code: `// ඔයාගේම functional interface — abstract method එකයි
+@FunctionalInterface
+interface MatchRule {
+    boolean matches(Customer a, Customer b);   // SAM
+    // තව abstract method එකක් දැම්මොත් -> compile error (functional නෑ)
+}
+
+// lambda එකකින් implement + pass කරන්න පුළුවන්
+MatchRule exactEmail = (a, b) -> a.getEmail().equals(b.getEmail());`,
+        note: '@FunctionalInterface = compiler-checked "one abstract method" contract.',
       },
     ],
     mortar:
-      'Mortar segment builder එකේ හැම rule එකක්ම `Predicate<Customer>` — "spend > 1000", "country == LK". ඒවා compose කරලා complex audiences හදනවා. Notifications `Consumer`, projections `Function`.',
+      'Mortar segment builder එකේ හැම rule එකක්ම `Predicate<Customer>` — "spend > 1000", "country == LK", "churn == ACTIVE". ඒවා compose කරලා (`predicate.and(other)`) complex audiences හදනවා. Identity resolution matching strategies (5.3.3.1) functional interfaces; notifications `Consumer`; projections `Function`. Behaviour-as-data නිසා flexible, testable, composable Mortar logic.',
     keyPoints: [
-      'Functional interface = one abstract method (SAM).',
-      'Predicate/Function/Supplier/Consumer = built-in workhorses.',
+      'Functional interface = abstract method එකයි විතරයි (SAM).',
+      'Predicate (T→boolean) / Function (T→R) / Supplier (()→T) / Consumer (T→void).',
       '`@FunctionalInterface` = compiler-checked contract.',
+      'Lambdas + method references වලින් implement කරනවා (behaviour-as-data).',
+    ],
+    pitfalls: [
+      'Abstract methods 2ක් දැම්මොත් functional interface නෙවෙයි (lambda වලින් implement කරන්න බෑ). default/static methods ගණන් නෑ.',
+      'Wrong functional interface තෝරගැනීම (Supplier vs Function) — signature (`() → T` vs `T → R`) බලලා තෝරන්න.',
     ],
   },
 
   '3.1.2': {
     summary:
-      'Lambda expression = anonymous function එකක් සඳහා කෙටි syntax — functional interface එකක් implement කරනවා.',
+      'Lambda expression = anonymous function එකක් සඳහා කෙටි syntax `(params) -> body` — functional interface එකක් instant implement කරනවා, anonymous class boilerplate නැතුව. Behaviour එකක් data වගේ pass කරන්න පුළුවන්.',
     sinhala: [
       {
-        heading: 'Concise behaviour',
-        body: '`(params) -> body` syntax එකෙන් functional interface එකක් instant implement කරනවා — anonymous class boilerplate නැතුව. Behaviour එකක් data එකක් වගේ pass කරන්න පුළුවන් (functional programming). Variables effectively-final නම් විතරයි capture කරන්න පුළුවන්.',
+        heading: 'කතාව: anonymous class boilerplate එකෙන් මිදෙමු',
+        body: 'Java 8-ට කලින්, customers sort කරන්න `Comparator` එකක් ඕන වුනාම — anonymous class එකක් (`new Comparator<Customer>() { public int compare(...) {...} }`) ලියන්න වුණා. Lines 5ක්, boilerplate ගොඩක්, actual logic එක එක line එකයි. Lambda expressions මේක fix කරනවා — `(a, b) -> ...` කියලා එක line එකකින්. Functional interface (3.1.1) එකක් instant implement කරනවා.',
+      },
+      {
+        heading: 'Lambda syntax + rules',
+        body: 'Lambda anatomy:',
+        points: [
+          '`(params) -> body` — parameters, arrow, body. `c -> c.getSpend() > 1000`.',
+          'Single expression → auto return (`a -> a * 2`); block → explicit return (`a -> { ...; return x; }`).',
+          'Type inference — parameter types compiler infer කරනවා (`(a, b) ->`, `Customer` ලියන්න ඕන නෑ).',
+          'Captured variables **effectively final** වෙන්නම ඕන (lambda එකෙන් පිට local variable එකක් වෙනස් කරන්න බෑ).',
+        ],
       },
     ],
     analogy:
-      'Long form letter එකක් වෙනුවට quick sticky-note එකක් වගේ — කෙටියෙන් behaviour එක ලියනවා.',
+      'Long formal letter එකක් (anonymous class) වෙනුවට quick sticky-note එකක් (lambda) — කෙටියෙන් "මේ වැඩේ කරන්න" කියලා behaviour එක ලියනවා. එකම message, අඩු ceremony.',
     code: [
       {
-        filename: 'Lambdas.java',
+        filename: 'LambdaVsAnonymous.java',
         language: 'java',
-        code: `// old anonymous class
-Collections.sort(customers, new Comparator<Customer>() {
+        code: `// OLD: anonymous class — boilerplate ගොඩක්
+customers.sort(new Comparator<Customer>() {
     public int compare(Customer a, Customer b) {
         return Double.compare(b.getTotalSpend(), a.getTotalSpend());
     }
 });
 
-// lambda - same thing, concise
+// NEW: lambda — එකම දේ, එක line එකක්
 customers.sort((a, b) -> Double.compare(b.getTotalSpend(), a.getTotalSpend()));`,
-        note: 'Boilerplate නැති කරලා behaviour එක clear.',
+        note: 'Lambda = functional interface එකක concise implementation.',
+      },
+      {
+        filename: 'LambdaForms.java',
+        language: 'java',
+        code: `// single expression — auto return
+Predicate<Customer> isVip = c -> c.getTotalSpend() > 1000;
+
+// block body — explicit return
+Function<Customer, String> tier = c -> {
+    if (c.getTotalSpend() > 1000) return "VIP";
+    return "Regular";
+};
+
+// effectively-final capture
+double threshold = 1000;              // (reassign කරන්න බෑ lambda එකෙන් පස්සේ)
+Predicate<Customer> above = c -> c.getTotalSpend() > threshold;`,
+        note: 'Captured local variables effectively-final වෙන්නම ඕන.',
       },
     ],
     mortar:
-      'Mortar analytics code එකේ sorting, filtering, mapping ඔක්කොම lambdas — "top spenders", "churned customers" වගේ logic කෙටියෙන්, read කරන්න ලේසියෙන්. Streams API එකට පදනම.',
+      'Mortar analytics code එකේ sorting, filtering, mapping ඔක්කොම lambdas — "top spenders", "churned customers", "spend by country" වගේ logic කෙටියෙන්, read කරන්න ලේසියෙන්. Streams API (3.1.4) එකට lambda foundation එකයි. Anonymous class boilerplate නැති නිසා Mortar data-processing code එක declarative + maintainable.',
     keyPoints: [
-      'Lambda = functional interface එකක concise implementation.',
-      'Behaviour-as-data (pass functions around).',
-      'Captured variables effectively-final වෙන්නම ඕන.',
+      'Lambda = functional interface එකක concise implementation `(params) -> body`.',
+      'Behaviour-as-data — functions pass around කරන්න පුළුවන්.',
+      'Single expression auto-return; block body explicit return.',
+      'Captured variables effectively-final.',
+    ],
+    pitfalls: [
+      'Lambda එකක් ඇතුලේ `this` = enclosing class එක (anonymous class එකේ `this` = anonymous instance එක — වෙනස).',
+      'Loop variable එකක් lambda එකකින් capture කරන්න බෑ (effectively-final නෑ) — final copy එකක් හදන්න.',
     ],
   },
 
   '3.1.3': {
     summary:
-      'Method reference (::) = lambda එකක් තව කෙටියෙන් — existing method එකකට point කරනවා.',
+      'Method reference (`::`) = lambda එකක් තව කෙටියෙන් — existing method එකකට point කරනවා. Forms 4ක්: `Class::static`, `instance::method`, `Class::instanceMethod`, `Class::new`.',
     sinhala: [
       {
-        heading: 'Four forms',
-        body: '`Class::staticMethod`, `instance::method`, `Class::instanceMethod`, `Class::new` (constructor). Lambda එකක් හුදෙක් existing method එකක් call කරනවා නම්, method reference එකෙන් තව කෙටියි + readable.',
+        heading: 'කතාව: lambda එක තව කෙටි කරමු',
+        body: 'ඔයාට lambda එකක් තියෙනවා: `c -> c.getEmail()`. මේක හුදෙක් existing method එකක් (`getEmail`) call කරනවා විතරයි. Java කියනවා — "ඔයා method එකක් call කරනවා විතරයි නම්, ඒ method එකට කෙලින්ම point කරන්න පුළුවන්": `Customer::getEmail`. මේකට method reference (`::`) කියනවා. Lambda එකේ තව කෙටි, readable version එකක්.',
+      },
+      {
+        heading: 'Method reference forms 4',
+        body: 'වර්ග 4ක්:',
+        points: [
+          '`Class::staticMethod` — static method (`Integer::parseInt` = `s -> Integer.parseInt(s)`).',
+          '`instance::method` — specific object එකක method (`repo::save` = `c -> repo.save(c)`).',
+          '`Class::instanceMethod` — first arg එකේ method (`Customer::getEmail` = `c -> c.getEmail()`).',
+          '`Class::new` — constructor reference (`Customer::new` = `() -> new Customer()`).',
+        ],
       },
     ],
     analogy:
-      '"මේ පණිවිඩේ එවන්න John ට" කියනවා වෙනුවට කෙලින්ම John ගේ contact එක tag කරනවා වගේ.',
+      '"මේ පණිවිඩේ John ට යවන්න" කියලා විස්තර කරනවා (lambda) වෙනුවට, කෙලින්ම John ගේ contact එක tag කරනවා (method reference) වගේ — කෙටියි, පැහැදිලියි, එකම දේ.',
     code: [
       {
-        filename: 'MethodRefs.java',
+        filename: 'MethodRefForms.java',
         language: 'java',
         code: `List<Customer> customers = repo.findAll();
 
-customers.forEach(this::enrich);                 // instance method
-customers.stream().map(Customer::getEmail);      // Class::instanceMethod
-customers.stream().map(String::toLowerCase);     // on the result
-Supplier<Customer> factory = Customer::new;      // constructor ref`,
+// Class::instanceMethod — c -> c.getEmail()
+customers.stream().map(Customer::getEmail);
+
+// instance::method — c -> repo.save(c)
+customers.forEach(repo::save);
+
+// Class::staticMethod — s -> Integer.parseInt(s)
+Stream.of("1","2","3").map(Integer::parseInt);
+
+// Class::new — constructor reference
+Supplier<Customer> factory = Customer::new;
+Customer c = factory.get();`,
+        note: 'lambda body එක method call එකක් විතරක් නම් → method reference.',
+      },
+      {
+        filename: 'BeforeAfter.java',
+        language: 'java',
+        code: `// lambda -> method reference (එකම දේ, කෙටියි)
+customers.stream()
+    .map(c -> c.getEmail())        // lambda
+    .map(e -> e.toLowerCase());    // lambda
+
+customers.stream()
+    .map(Customer::getEmail)       // method reference
+    .map(String::toLowerCase);     // method reference`,
         note: 'c -> c.getEmail()  ⟶  Customer::getEmail',
       },
     ],
     mortar:
-      'Mortar stream pipelines වල `Customer::getEmail`, `this::geocode`, `Customer::new` වගේ method references — enrichment/mapping code එක declarative + tidy. Lambda එකේ තව කෙටි version එක.',
+      'Mortar stream pipelines වල `Customer::getEmail`, `repo::save`, `this::geocode`, `Customer::new` වගේ method references — enrichment/mapping/collection code එක declarative + tidy. Lambda එකේ තව කෙටි version එක නිසා "noise" අඩු, intent පැහැදිලි. Constructor references (`SegmentDto::new`) DTOs map කරන්නත් common.',
     keyPoints: [
-      '4 forms: static, bound instance, unbound instance, constructor.',
+      '4 forms: Class::static, instance::method, Class::instanceMethod, Class::new.',
       'Lambda body එක method call එකක් විතරක් නම් use කරන්න.',
-      'Readable + less noise.',
+      'Readable + less noise than equivalent lambda.',
+      'Constructor references (`Class::new`) factories/mapping වලට.',
+    ],
+    pitfalls: [
+      '`instance::method` (bound) vs `Class::instanceMethod` (unbound) confuse කරන එක — `repo::save` (specific repo) vs `Customer::getEmail` (any customer).',
+      'Lambda එකට logic ටිකක් (multiple calls, conditions) තියෙනවා නම් method reference වලට convert කරන්න බෑ.',
     ],
   },
 
   '3.1.4.1': {
     summary:
-      'Streams: map (transform), filter (select), flatMap (flatten), reduce (aggregate), collect (materialize).',
+      'Streams API = data එකක් හරහා යන declarative pipeline එකක්. `filter` (select), `map` (transform), `flatMap` (flatten nested), `reduce` (fold to one value), `collect` (materialize to List/Set/Map). Intermediate ops lazy; terminal op executes.',
     sinhala: [
       {
-        heading: 'Declarative data pipelines',
-        body: 'Stream එකක් = data එකක් හරහා යන pipeline එකක්. `filter` (Predicate), `map` (transform), `flatMap` (nested→flat), `reduce` (single value එකකට fold), `collect` (List/Set/Map වලට). Intermediate ops lazy; terminal op (collect/reduce/forEach) එකෙන් execute වෙනවා.',
+        heading: 'කතාව: loops වලට වඩා හොඳ ක්‍රමයක්',
+        body: 'Mortar analytics — "spend by country" ගණන් කරන්න. Traditional loop එකකින්: map එකක් හදලා, customers loop කරලා, group කරලා, sum කරලා... lines ගොඩක්, "කොහොමද" කරනවද කියන mechanics වලින් පිරිලා. Streams API එකෙන් — "මොනවද ඕන" කියලා declaratively කියනවා: `filter → group → sum`. කෙටි, read කරන්න ලේසි, compose කරන්න පුළුවන්.',
+      },
+      {
+        heading: 'Stream operations',
+        body: 'Pipeline එකේ steps:',
+        points: [
+          '`filter(predicate)` — condition එකට ගැලපෙන elements තෝරනවා (select).',
+          '`map(fn)` — element එකින් එක transform කරනවා (customer → spend).',
+          '`flatMap(fn)` — nested structure එකක් flatten කරනවා (list of lists → one list).',
+          '`reduce(op)` — ඔක්කොම එක value එකකට fold කරනවා (sum, max).',
+          '`collect(collector)` — result එක List/Set/Map එකකට materialize (`Collectors.groupingBy`).',
+        ],
+      },
+      {
+        heading: 'Lazy intermediate, eager terminal',
+        body: 'Stream ops දෙ වර්ගයක්: **Intermediate** (filter, map, flatMap) — **lazy**, stream එකක් return කරනවා, තාම run වෙන්නෙ නෑ. **Terminal** (collect, reduce, forEach, count) — **eager**, මෙතනදී තමයි whole pipeline එක execute වෙන්නේ. Terminal op එකක් නැත්නම් stream එකක් කිසිවක් කරන්නෙ නෑ.',
       },
     ],
     analogy:
-      'Factory conveyor belt එකක් — raw materials filter → shape (map) → box (collect). හැම station එකක්ම එක වැඩක්.',
+      'Factory conveyor belt එකක් වගේ — raw materials (data) filter station එකෙන් යනවා → shape station (map) → box station (collect). හැම station එකක්ම එක වැඩක්. Belt එක start කරන්නේ (terminal op) අන්තිමට power on කරාම විතරයි.',
     code: [
       {
-        filename: 'Streams.java',
+        filename: 'StreamPipeline.java',
         language: 'java',
-        code: `Map<String, Double> spendByCountry = customers.stream()
-    .filter(c -> c.getTotalSpend() > 0)                 // select
-    .collect(Collectors.groupingBy(
+        code: `// "spend by country" — declarative, කෙටි
+Map<String, Double> spendByCountry = customers.stream()
+    .filter(c -> c.getTotalSpend() > 0)              // select
+    .collect(Collectors.groupingBy(                  // group + aggregate
         Customer::getCountry,
-        Collectors.summingDouble(Customer::getTotalSpend))); // aggregate
+        Collectors.summingDouble(Customer::getTotalSpend)));
 
-double totalRevenue = customers.stream()
-    .mapToDouble(Customer::getTotalSpend)
-    .sum();`,
-        note: 'Declarative — "මොනවද ඕන" කියනවා, "කොහොමද loop කරන්නේ" නෙවෙයි.',
+// total revenue
+double revenue = customers.stream()
+    .mapToDouble(Customer::getTotalSpend)            // map to double
+    .sum();                                          // terminal`,
+        note: '"මොනවද ඕන" කියනවා — loop mechanics නෑ.',
+      },
+      {
+        filename: 'FilterMapCollect.java',
+        language: 'java',
+        code: `// VIP customers ලාගේ emails, sorted
+List<String> vipEmails = customers.stream()
+    .filter(c -> c.getTotalSpend() > 1000)   // intermediate (lazy)
+    .map(Customer::getEmail)                  // intermediate (lazy)
+    .sorted()                                 // intermediate (lazy)
+    .collect(Collectors.toList());            // TERMINAL -> runs pipeline`,
+        note: 'Intermediate ops lazy; collect (terminal) එකෙන් execute.',
+      },
+      {
+        filename: 'FlatMapReduce.java',
+        language: 'java',
+        code: `// flatMap — customer කෙනෙක්ට orders list එකක්; ඔක්කොම orders එකට
+List<Order> allOrders = customers.stream()
+    .flatMap(c -> c.getOrders().stream())    // list-of-lists -> flat stream
+    .collect(Collectors.toList());
+
+// reduce — ඔක්කොම spend එකතු කරනවා
+double total = customers.stream()
+    .map(Customer::getTotalSpend)
+    .reduce(0.0, Double::sum);               // fold to one value`,
+        note: 'flatMap = nested flatten; reduce = fold to single value.',
       },
     ],
     mortar:
-      'Mortar RFM+T segmentation, "spend by country", "top 10 products" වගේ analytics streams වලින් — group, sum, sort declarative විදිහට. Loops වලට වඩා clear + composable, parallelize කරන්නත් ලේසියි.',
+      'Mortar RFM+T segmentation, "spend by country", "top 10 products", churn breakdowns වගේ analytics streams වලින් — group, sum, sort declarative විදිහට. Loops වලට වඩා clear, composable, bug අඩු. `Collectors.groupingBy` + `summingDouble` වගේ powerful aggregations. Streams parallelize කරන්නත් ලේසි (3.1.4.2). Mortar data-processing code එකේ backbone.',
     keyPoints: [
-      'filter/map/flatMap = intermediate (lazy); reduce/collect = terminal.',
-      'Collectors.groupingBy/summing = powerful aggregations.',
-      'Declarative — read කරන්න ලේසි.',
+      'filter (select) / map (transform) / flatMap (flatten) / reduce (fold) / collect (materialize).',
+      'Intermediate ops lazy; terminal op (collect/reduce/count) executes pipeline.',
+      '`Collectors.groupingBy` / `summingDouble` = powerful aggregations.',
+      'Declarative ("what") — loop mechanics ("how") නෑ.',
+    ],
+    pitfalls: [
+      'Terminal op එකක් නැත්නම් stream එක කිසිවක් කරන්නෙ නෑ (lazy).',
+      'Stream එකක් reuse කරන්න බෑ (terminal op එකකට පස්සේ) — `IllegalStateException`.',
+      'Stream forEach ඇතුලේ shared mutable state modify කරන එක (side effects) — collect use කරන්න.',
     ],
   },
 
   '3.1.4.2': {
     summary:
-      'Parallel streams = ForkJoinPool එකෙන් data එක multiple cores වල process — big data වලට, ඒත් පරෙස්සමින්.',
+      'Parallel streams = `.parallelStream()` / `.parallel()` — data එක common ForkJoinPool එකේ split කරලා multiple cores වල process කරනවා. Large + CPU-bound + stateless වලට හොඳයි; small/IO-bound වලට overhead වැඩි.',
     sinhala: [
       {
-        heading: 'When (and when not)',
-        body: '`.parallelStream()` හෝ `.parallel()` වලින් stream එක common ForkJoinPool එකේ split කරලා parallel process කරනවා. Large datasets + CPU-bound + stateless ops වලට හොඳයි. Small data, IO-bound, හෝ ordered/stateful ops වලට overhead වැඩි/වැරදි වෙන්න පුළුවන්. Shared mutable state avoid කරන්න.',
+        heading: 'කතාව: millions of churn scores compute කරන්න',
+        body: 'Mortar millions of customers ට churn scores compute කරන්න ඕන — හැම එකකම CPU-heavy calculation එකක්. Sequential stream එකකින් එක core එකයි වැඩ කරන්නේ, අනිත් cores idle. `.parallelStream()` දැම්මම — Java data එක split කරලා ඔක්කොම CPU cores වල එකවර process කරනවා (multi-core speedup). ඒත් මේක හැම තැනම දාන්න හොඳ නෑ — පරෙස්සම් වෙන්න ඕන.',
+      },
+      {
+        heading: 'කවදා parallel (කවදා නෑ)',
+        body: 'Parallel streams වටින්නේ:',
+        points: [
+          'Large datasets — split කරන overhead එකට වඩා වැඩ ලොකු වෙන්නම ඕන.',
+          'CPU-bound + stateless operations — scoring, calculations (IO නෙවෙයි).',
+          'නරකයි: small data (overhead > benefit), IO-bound (threads block වෙනවා), ordered/stateful ops.',
+          'shared mutable state avoid කරන්නම ඕන (race conditions — parallel threads).',
+        ],
       },
     ],
     analogy:
-      'ලොකු වැඩක් workers ගොඩකට බෙදනවා වගේ — ලොකු වැඩ්වලට හොඳයි, පොඩි වැඩකට "බෙදන" වියදම වැඩියි.',
+      'ලොකු වැඩක් (data) workers (cores) ගොඩකට බෙදනවා වගේ — ලොකු වැඩ්වලට ලොකු speedup. ඒත් පොඩි වැඩකට "බෙදලා ආයෙ එකතු කරන" වියදම (overhead) වැඩ එකට වඩා වැඩියි — ඒ නිසා පොඩි වැඩ එකෙක්ම කරන එක හොඳයි.',
     code: [
       {
-        filename: 'ParallelStreams.java',
+        filename: 'ParallelStream.java',
         language: 'java',
-        code: `// millions of records, CPU-bound scoring -> parallel helps
-double totalScore = customers.parallelStream()
-    .mapToDouble(this::computeChurnScore)   // stateless, CPU-bound
+        code: `// millions of customers, CPU-bound scoring -> parallel helps
+double totalScore = customers.parallelStream()      // parallel!
+    .mapToDouble(this::computeChurnScore)           // stateless, CPU-bound
     .sum();
+// Java data එක cores අතර split කරලා parallel process -> multi-core speedup`,
+        note: 'Large + CPU-bound + stateless → parallel වටිනවා.',
+      },
+      {
+        filename: 'WhenNotParallel.java',
+        language: 'java',
+        code: `// BAD: small data — overhead > benefit
+List.of(1, 2, 3).parallelStream().map(x -> x * 2);   // sequential හොඳයි
 
-// avoid: shared mutable state in parallel (race conditions)`,
-        note: 'Stateless + large + CPU-bound නම් විතරයි parallel වටිනවා.',
+// BAD: shared mutable state — race condition!
+List<String> results = new ArrayList<>();
+customers.parallelStream().forEach(c -> results.add(c.getEmail()));  //  unsafe!
+
+// GOOD: collect (thread-safe accumulation)
+List<String> safe = customers.parallelStream()
+    .map(Customer::getEmail).collect(Collectors.toList());`,
+        note: 'Shared mutable state parallel එකේ බෑ — collect use කරන්න.',
       },
     ],
     mortar:
-      'Mortar millions of customers churn-score / RFM compute කරනකොට `parallelStream` වලින් multi-core throughput. ඒත් IO (DB/API) calls parallel stream වල දාන්නෙ නෑ — custom executor + CompletableFuture prefer.',
+      'Mortar millions of customers churn-score / RFM compute කරද්දී `parallelStream` වලින් multi-core throughput — batch analytics jobs වේගවත් වෙනවා. ඒත් IO (DB/API) calls parallel stream වල දාන්නෙ නෑ (common ForkJoinPool block වෙනවා) — ඒවට custom executor + CompletableFuture (2.4.6.2) හෝ virtual threads (3.2.7) prefer. Parallel streams pure CPU-bound, stateless batch computations වලට විතරයි.',
     keyPoints: [
-      'Parallel = ForkJoinPool split; large + CPU-bound + stateless වලට.',
-      'Small/IO-bound/stateful → sequential හොඳයි.',
-      'Shared mutable state = race conditions — avoid.',
+      'Parallel = ForkJoinPool split across cores; large + CPU-bound + stateless වලට.',
+      'Small / IO-bound / stateful → sequential හොඳයි.',
+      'Shared mutable state = race conditions — collect/reduce use කරන්න.',
+      'IO-bound concurrency → CompletableFuture / virtual threads, parallel stream නෙවෙයි.',
+    ],
+    pitfalls: [
+      'Parallel stream common ForkJoinPool එක share කරනවා — IO/blocking tasks දැම්මොත් whole app එකට බලපානවා.',
+      '"parallel දාම fast" කියන එක වැරදියි — small/IO data වලට slower. Measure කරන්න.',
     ],
   },
 
   '3.1.5': {
     summary:
-      'Optional<T> = value එකක් "තියෙන්න පුළුවන් / නැති වෙන්න පුළුවන්" කියලා explicit කරන container එකක් — NPE වළක්වන්න.',
+      '`Optional<T>` = value එකක් "තියෙන්න පුළුවන් / නැති වෙන්න පුළුවන්" කියලා **type එකෙන්ම** කියන container එකක් — null return කරනවා වෙනුවට. NullPointerException වළක්වන්න.',
     sinhala: [
       {
-        heading: 'Null-safety',
-        body: '`Optional<T>` null return කරනවා වෙනුවට "value නැති වෙන්න පුළුවන්" කියන එක type එකෙන්ම කියනවා. `map`, `filter`, `orElse`, `orElseThrow`, `ifPresent` වලින් null checks නැතුව safely handle කරනවා. Return types වලට හොඳයි; fields/parameters වලට recommend කරන්නෙ නෑ.',
+        heading: 'කතාව: null එකේ බිලියන් ඩොලර් වැරැද්ද',
+        body: 'Mortar `repo.findByEmail(email)` — customer නැත්නම් මොකද return කරන්නේ? null. දැන් caller null check කරන්න අමතක වුනොත් — `NullPointerException` (NPE), production crash. "null" කියන්නේ "value නෑ" ද, "error" ද, "not set" ද — නොපැහැදිලියි. `Optional<T>` මේක fix කරනවා — "value නැති වෙන්න පුළුවන්" කියන එක **return type එකෙන්ම** පැහැදිලි කරනවා, safe handling methods එක්ක.',
+      },
+      {
+        heading: 'Optional operations',
+        body: 'Null-safe handling:',
+        points: [
+          '`Optional.of(x)` / `Optional.empty()` / `Optional.ofNullable(x)` — create.',
+          '`map(fn)` / `filter(pred)` — value තියෙනවා නම් transform/filter (නැත්නම් empty).',
+          '`orElse(default)` / `orElseGet(supplier)` / `orElseThrow()` — value නැත්නම් fallback.',
+          '`ifPresent(consumer)` / `ifPresentOrElse(...)` — value තියෙනවා නම් action.',
+          'රීතිය: return types වලට හොඳයි; fields/parameters වලට recommend කරන්නෙ නෑ.',
+        ],
       },
     ],
     analogy:
-      'තෑග්ග තියෙන්නත් පුළුවන් නැති වෙන්නත් පුළුවන් box එකක් වගේ — කෙලින්ම අත දාන්නෙ නැතුව, "ඇත්නම් මේක කරන්න" කියලා safely open කරනවා.',
+      'තෑග්ග තියෙන්නත් පුළුවන්, නැති වෙන්නත් පුළුවන් box එකක් වගේ. කෙලින්ම අත දානවා (null access) වෙනුවට — "ඇත්නම් මේක කරන්න, නැත්නම් මේ default එක" කියලා safely open කරනවා. Box එක බලන්නෙ නැතුවම දේවල් ගන්න යන එක (null) තමයි NPE.',
     code: [
       {
-        filename: 'Optionals.java',
+        filename: 'OptionalBasics.java',
         language: 'java',
-        code: `Optional<Customer> found = repo.findByEmail(email);
+        code: `// null වෙනුවට Optional return -> "නැති වෙන්න පුළුවන්" type එකෙන් පැහැදිලි
+Optional<Customer> found = repo.findByEmail(email);
 
+// safe chain — null checks නෑ
 String country = found
-    .map(Customer::getCountry)
-    .filter(c -> !c.isBlank())
-    .orElse("UNKNOWN");            // safe default, no NPE
+    .map(Customer::getCountry)             // තියෙනවා නම් transform
+    .filter(c -> !c.isBlank())             // condition
+    .orElse("UNKNOWN");                    // නැත්නම් default (NPE නෑ)
 
-repo.findByEmail(email)
-    .ifPresentOrElse(this::enrich, () -> log.warn("not found: " + email));`,
+// action if present
+found.ifPresentOrElse(
+    this::enrich,
+    () -> log.warn("not found: " + email)
+);`,
         note: 'null check chains වෙනුවට clean, safe pipeline.',
+      },
+      {
+        filename: 'OptionalNotGet.java',
+        language: 'java',
+        code: `Optional<Customer> c = repo.findByEmail(email);
+
+// BAD: .get() කෙලින්ම — Optional එකේ තේරුමම නැති කරනවා (NPE වගේ)
+// Customer x = c.get();     // empty නම් NoSuchElementException!
+
+// GOOD: orElseThrow / orElse
+Customer safe = c.orElseThrow(() -> new NotFoundException(email));`,
+        note: '.get() කෙලින්ම call එපා — orElse/orElseThrow use කරන්න.',
       },
     ],
     mortar:
-      'Mortar enrichment වලදී customer fields (country, phone, gender) බොහෝවිට missing. `Optional` වලින් "unknown" gracefully handle කරලා, NPE crashes නැතුව enrichment pipeline එක ස්ථාවර තියාගන්නවා.',
+      'Mortar enrichment වලදී customer fields (country, phone, gender, churnScore) බොහෝවිට missing. `Optional` වලින් "unknown" gracefully handle කරලා, NPE crashes නැතුව enrichment pipeline එක stable. Repository lookups (`findByEmail`) `Optional<Customer>` return කරලා, caller ට null-safety type එකෙන්ම enforce කරනවා. Spring Data repositories `Optional` return කරන එක standard.',
     keyPoints: [
-      'Optional = explicit "maybe value" (NPE වළක්වයි).',
-      'map/filter/orElse/orElseThrow/ifPresent.',
-      'Return types වලට use; fields/params වලට නෙවෙයි.',
+      'Optional = explicit "maybe value" — NPE වළක්වයි.',
+      'map / filter / orElse / orElseThrow / ifPresent — safe handling.',
+      'Return types වලට use; fields/parameters වලට නෙවෙයි.',
+      'null return කරනවා වෙනුවට Optional (Spring Data standard).',
     ],
-    pitfalls: ['`optional.get()` කෙලින්ම call කරන එක anti-pattern — orElse/orElseThrow use කරන්න.'],
+    pitfalls: [
+      '`optional.get()` කෙලින්ම call = anti-pattern (empty නම් exception). orElse/orElseThrow/ifPresent use කරන්න.',
+      'Optional fields / method parameters / collections (`Optional<List>`) — over-use. Return values වලට විතරයි.',
+    ],
   },
 
   '3.1.6': {
     summary:
-      'java.time (Java 8) = immutable, thread-safe date/time API — පරණ Date/Calendar වෙනුවට. LocalDate, Instant, Duration.',
+      '`java.time` (Java 8) = immutable, thread-safe, clear date/time API — පරණ mutable `Date`/`Calendar` වෙනුවට. `LocalDate`, `LocalDateTime`, `Instant`, `ZonedDateTime`, `Duration`/`Period`.',
     sinhala: [
       {
-        heading: 'Modern date/time',
-        body: 'පරණ `Date`/`Calendar` mutable + confusing + not thread-safe. `java.time`: `LocalDate` (date), `LocalDateTime` (date+time), `Instant` (UTC timestamp), `ZonedDateTime` (timezone), `Duration`/`Period` (spans). ඔක්කොම immutable + thread-safe + clear API.',
+        heading: 'කතාව: පරණ Date එකේ අවුල්',
+        body: 'පරණ `java.util.Date`/`Calendar` — mutable (object එක වෙනස් වෙනවා, concurrent bugs), confusing (months 0-indexed!), not thread-safe (`SimpleDateFormat` shared කරොත් crash). Mortar churn prediction එකට "days since last purchase", "predicted churn date" වගේ date math ගොඩක් ඕන — පරණ API එකෙන් bug-prone. Java 8 `java.time` — immutable, thread-safe, clear API එකෙන් මේ ඔක්කොම fix කරනවා.',
+      },
+      {
+        heading: 'ප්‍රධාන types',
+        body: 'java.time classes:',
+        points: [
+          '`LocalDate` — date විතරයි (2026-07-22). `LocalTime` — time විතරයි. `LocalDateTime` — දෙකම (timezone නෑ).',
+          '`Instant` — UTC timestamp (machine time — events, logs).',
+          '`ZonedDateTime` — date+time+timezone (user-facing, DST-aware).',
+          '`Duration` (time-based — hours/seconds) / `Period` (date-based — days/months) — spans.',
+          'ඔක්කොම **immutable + thread-safe** — `plusDays()` අලුත් object එකක් return කරනවා.',
+        ],
       },
     ],
     analogy:
-      'පරණ අවුල් diary එකක් වෙනුවට, clean modern calendar app එකක් වගේ — timezones, durations ඔක්කොම හරියට.',
+      'පරණ අවුල් diary එකක් (Date — මකලා ලියන, පිටු අවුල්) වෙනුවට, clean modern calendar app එකක් (java.time) — timezones, reminders, durations ඔක්කොම හරියට, වෙනස් කරන්න බෑ (immutable) නිසා අවුලක් නෑ.',
     code: [
       {
-        filename: 'JavaTime.java',
+        filename: 'JavaTimeChurn.java',
         language: 'java',
-        code: `Instant lastPurchase = customer.getLastPurchase();
+        code: `// churn calculation — clear, immutable, thread-safe
+Instant lastPurchase = customer.getLastPurchase();
 Instant now = Instant.now();
 
 long daysSince = Duration.between(lastPurchase, now).toDays();
-LocalDate predictedChurn = LocalDate.now().plusDays(30);
+LocalDate predictedChurn = LocalDate.now().plusDays(30);   // අලුත් object
 
 boolean overdue = daysSince > customer.getAvgIntervalDays();`,
-        note: 'Immutable + thread-safe — concurrent jobs වලට safe.',
+        note: 'Immutable + thread-safe — concurrent scoring jobs වල safe.',
+      },
+      {
+        filename: 'TimeTypes.java',
+        language: 'java',
+        code: `LocalDate today   = LocalDate.now();               // 2026-07-22
+LocalDate signup  = LocalDate.of(2025, 1, 15);
+Period membership = Period.between(signup, today);  // "1 year, 6 months, ..."
+
+Instant eventTime = Instant.now();                  // UTC timestamp (logs)
+ZonedDateTime lk  = ZonedDateTime.now(ZoneId.of("Asia/Colombo")); // user tz
+
+// immutable — plusDays අලුත් object; today වෙනස් වෙන්නෙ නෑ
+LocalDate nextWeek = today.plusWeeks(1);`,
+        note: 'LocalDate/Instant/ZonedDateTime/Period — right type per need.',
       },
     ],
     mortar:
-      'Mortar churn prediction එකේ "days since last purchase", "predicted churn date", "expected purchase interval" ඔක්කොම `Instant`/`Duration`/`LocalDate` වලින්. Immutable නිසා parallel scoring jobs වල safely share කරනවා.',
+      'Mortar churn prediction (PROJECT_IDEA 3.2) එකේ "days since last purchase", "predicted churn date", "expected purchase interval" ඔක්කොම `Instant`/`Duration`/`LocalDate` වලින්. Immutable නිසා parallel scoring jobs (3.1.4.2) වල safely share කරනවා — thread-safety නොමිලේ. Events/logs `Instant` (UTC); user-facing dates `ZonedDateTime` (tenant timezone). පරණ Date/Calendar අලුත් code එකේ නෑ.',
     keyPoints: [
-      'java.time = immutable + thread-safe.',
-      'LocalDate/LocalDateTime/Instant/ZonedDateTime; Duration/Period.',
-      'පරණ Date/Calendar avoid කරන්න.',
+      'java.time = immutable + thread-safe + clear (පරණ Date/Calendar වෙනුවට).',
+      'LocalDate/LocalDateTime (no tz) / Instant (UTC) / ZonedDateTime (tz).',
+      'Duration (time-based) / Period (date-based) = spans.',
+      'Immutable — `plusDays()` අලුත් object; concurrent-safe.',
+    ],
+    pitfalls: [
+      'පරණ `Date`/`Calendar`/`SimpleDateFormat` අලුත් code එකේ use කරන්න එපා (mutable, not thread-safe).',
+      'Immutable නිසා `date.plusDays(1)` return එක ignore කරොත් වෙනසක් නෑ — `date = date.plusDays(1)`.',
     ],
   },
 
