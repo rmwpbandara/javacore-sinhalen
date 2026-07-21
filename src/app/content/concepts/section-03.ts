@@ -489,125 +489,224 @@ LocalDate nextWeek = today.plusWeeks(1);`,
 
   '3.2.1': {
     summary:
-      'Java Module System (Jigsaw, Java 9) = strong encapsulation + explicit dependencies package මට්ටමින් උඩ.',
+      'Java Module System (Project Jigsaw, Java 9) = `module-info.java` එකෙන් module එකක `requires` (dependencies) සහ `exports` (public packages) declare කරනවා. Strong encapsulation + explicit dependencies package මට්ටමින් උඩ.',
     sinhala: [
       {
+        heading: 'කතාව: "public" ප්‍රමාණවත් නෑ',
+        body: 'Mortar internal library එකක `com.mortar.resolution.internal` package එකේ classes තියෙනවා — ඒවා library එකෙන් පිට use කරන්න ඕන නෑ (internal implementation). ඒත් Java වල `public` class එකක් classpath එකේ ඕන කෙනෙක්ට access කරන්න පුළුවන් — "internal" කියලා hide කරන්න ක්‍රමයක් නෑ package මට්ටමින් උඩ. Java 9 modules මේක fix කරනවා — module එකකින් **export කරන packages විතරයි** පිටතට පේන්නේ.',
+      },
+      {
         heading: 'module-info.java',
-        body: '`module-info.java` එකෙන් module එකක් `requires` (dependencies) සහ `exports` (public packages) declare කරනවා. Export නොකරපු packages පිටින් access කරන්න බෑ — strong encapsulation. Reliable configuration + smaller runtime (jlink) දෙනවා. Enterprise/library code වලට වැදගත්.',
+        body: 'Module එකක් define කරන්නේ:',
+        points: [
+          '`requires X` — මේ module එකට X module එක ඕන (explicit dependency).',
+          '`exports pkg` — මේ package එක පිට modules වලට access කරන්න පුළුවන් (public API).',
+          'Export නොකරපු packages — module එක ඇතුලේ විතරයි (strong encapsulation, "public" වුනත් hidden).',
+          'Benefits: reliable configuration (missing deps startup එකේ fail), smaller runtime (`jlink`), better security.',
+        ],
       },
     ],
     analogy:
-      'ගොඩනැගිල්ලක security zones වගේ — කුමන දොරවල් (packages) පිටට open ද, කුමන services (modules) ඕන ද කියලා explicit.',
+      'ගොඩනැගිල්ලක security zones වගේ. `exports` = පිටතට open කරන දොරවල් (lobby, reception). `requires` = මේ building එකට ඕන services (electricity, water). Export නොකරපු කාමර (internal packages) — පිටින් කෙනෙක්ට යන්න බෑ, "public" වුනත්.',
     code: [
       {
         filename: 'module-info.java',
         language: 'java',
         code: `module com.mortar.resolution {
-    requires com.mortar.core;        // depends on
-    requires transitive java.sql;
+    requires com.mortar.core;          // dependency
+    requires transitive java.sql;      // මේක use කරන අයටත් java.sql
 
-    exports com.mortar.resolution.api;   // public
-    // internal packages stay hidden
+    exports com.mortar.resolution.api;   // public — පිට modules වලට
+    // com.mortar.resolution.internal export නෑ -> hidden (encapsulated)
 }`,
-        note: 'exports නොකරපු internal code එක ආරක්ෂිතයි.',
+        note: 'exports නොකරපු internal packages පිටින් access කරන්න බෑ.',
+      },
+      {
+        filename: 'StrongEncapsulation.java',
+        language: 'java',
+        code: `// වෙන module එකකින්:
+import com.mortar.resolution.api.Resolver;        // ✅ exported
+// import com.mortar.resolution.internal.Matcher; //  නෑ! exported නෑ (compile error)
+
+// public class වුනත්, module එකෙන් export නොකළොත් access බෑ`,
+        note: 'Module boundary = "public" වලට වඩා strong encapsulation.',
       },
     ],
     mortar:
-      'Mortar internal libraries (core, resolution, prediction) modules විදිහට split කරලා, public APIs විතරක් export කරනවා — internal implementation encapsulated, dependencies පැහැදිලියි. ලොකු codebase එකක් managed තියාගන්න.',
+      'Mortar internal libraries (core, resolution, prediction, activation) modules විදිහට split කරලා, public APIs විතරක් export කරනවා — internal implementation encapsulated, dependencies පැහැදිලියි. ලොකු codebase එකක් managed තියාගන්න, teams අතර clean boundaries. `jlink` වලින් custom minimal runtime (containers — 11.2.1 — වලට smaller images). Microservices (Section 8) module boundaries bounded contexts (8.1.2) එකට align වෙනවා.',
     keyPoints: [
-      'module-info.java: requires + exports.',
-      'Strong encapsulation (non-exported = hidden).',
-      'jlink වලින් custom minimal runtime.',
+      'module-info.java: `requires` (deps) + `exports` (public packages).',
+      'Export නොකරපු packages = hidden (strong encapsulation, "public" වුනත්).',
+      'Reliable config (missing deps fail fast) + jlink smaller runtime.',
+      'Enterprise/library code වලට වැදගත් (small apps වලට optional).',
+    ],
+    pitfalls: [
+      'Modules adopt කිරීම legacy classpath code එකට disruptive වෙන්න පුළුවන් — gradual migration.',
+      'Reflection (frameworks — Spring) modules එක්ක `opens` directive එකක් ඕන (deep reflection access).',
     ],
   },
 
   '3.2.2': {
     summary:
-      'var (Java 10) = local variable type inference — compiler type එක infer කරනවා, ඒත් still statically typed.',
+      '`var` (Java 10) = local variable type inference — compiler right-hand-side එකෙන් type එක infer කරනවා. **Static typing තාම** (dynamic නෙවෙයි); local variables වලට විතරයි.',
     sinhala: [
       {
-        heading: 'Less boilerplate',
-        body: '`var` කියන්නේ dynamic typing නෙවෙයි — compile-time එකේ type එක infer කරලා fix කරනවා. Local variables වලට විතරයි (fields/params/return නෑ). Long generic types වගේ තැන් වල readability වැඩි කරනවා, ඒත් type එක obvious නොවෙන තැන් වල avoid කරන්න.',
+        heading: 'කතාව: verbose generic types',
+        body: 'Mortar analytics code එකේ `Map<String, List<Customer>> byCountry = new HashMap<String, List<Customer>>();` වගේ දිග declarations. Type එක දෙපාරක් — left + right. Repetitive, noisy. Java 10 `var` — `var byCountry = new HashMap<String, List<Customer>>();`. Compiler right-hand-side එකෙන් type එක infer කරනවා. වැදගත්: මේක **dynamic typing නෙවෙයි** — type එක compile-time එකේ fix වෙනවා, වෙනස් වෙන්නෙ නෑ.',
+      },
+      {
+        heading: 'var rules',
+        body: 'මතක තියාගන්න:',
+        points: [
+          'Local variables වලට විතරයි (method body ඇතුලේ) — fields, parameters, return types වලට බෑ.',
+          'Initializer එකක් ඕන (`var x;` බෑ — type infer කරන්න value එකක් ඕන).',
+          'Static typing තාම — type එක compile-time එකේ fixed (JavaScript `var` වගේ නෙවෙයි).',
+          'Type එක right-hand-side එකෙන් **පැහැදිලි** තැන් වල use කරන්න — නැත්නම් explicit type.',
+        ],
       },
     ],
     analogy:
-      '"මේක Integer එකක්" කියලා ආයෙ නොකියා, "value = 5" කියනවා වගේ — compiler type එක තේරුම් ගන්නවා, ඒත් type එක වෙනස් වෙන්නෙ නෑ.',
+      '"මේක Integer එකක්" කියලා ආයෙ නොකියා, "value = 5" කියනවා වගේ — compiler type එක තේරුම් ගන්නවා (5 = int). ඒත් type එක fixed — පස්සේ String එකක් දාන්න බෑ. Context එකෙන් පැහැදිලි නම් අඩුවෙන් ලියනවා.',
     code: [
       {
-        filename: 'Var.java',
+        filename: 'VarInference.java',
         language: 'java',
-        code: `var customers = new ArrayList<Customer>();          // inferred ArrayList<Customer>
+        code: `// verbose generic types -> කෙටි (type එක right side එකෙන් පැහැදිලි)
+var customers = new ArrayList<Customer>();              // ArrayList<Customer>
 var byCountry = new HashMap<String, List<Customer>>(); // less noise
 
-for (var entry : byCountry.entrySet()) {           // clean loop
+// clean loops
+for (var entry : byCountry.entrySet()) {               // Map.Entry<...>
     process(entry.getKey(), entry.getValue());
 }
-// var x;          // ERROR: needs initializer`,
-        note: 'Static typing තාම — type inference විතරයි.',
+
+// static typing තාම — type fixed
+var count = 5;      // int
+// count = "five";  //  compile error (type fixed as int)`,
+        note: 'Static typing තාම — type inference විතරයි (dynamic නෙවෙයි).',
+      },
+      {
+        filename: 'VarLimits.java',
+        language: 'java',
+        code: `var list = new ArrayList<String>();   // ✅ local variable + initializer
+
+// var x;                              //  initializer නෑ
+// var y = null;                       //  type infer කරන්න බෑ
+
+// class Field { var f = 1; }          //  fields වලට බෑ
+// void m(var p) { }                   //  parameters වලට බෑ`,
+        note: 'Local variables + initializer විතරයි.',
       },
     ],
     mortar:
-      'Mortar analytics code එකේ verbose generic declarations (`Map<String, List<Customer>>`) `var` වලින් කෙටි කරලා readability වැඩි කරනවා — type එක right-hand-side එකෙන් පැහැදිලි තැන් වල.',
+      'Mortar analytics/data-processing code එකේ verbose generic declarations (`Map<String, List<Customer>>`) `var` වලින් කෙටි කරලා readability වැඩි කරනවා — type එක right-hand-side එකෙන් පැහැදිලි තැන් වල. Stream pipelines, loops වල clean. ඒත් type එක obvious නොවෙන තැන් (`var result = service.process();`) explicit type — code clarity එකට. Balanced use.',
     keyPoints: [
-      'var = compile-time type inference (dynamic නෙවෙයි).',
+      '`var` = compile-time type inference (dynamic නෙවෙයි — static typing තාම).',
       'Local variables only (initializer ඕන).',
-      'Type obvious නම් use; නැත්නම් explicit type.',
+      'Type right-hand-side එකෙන් පැහැදිලි නම් use; නැත්නම් explicit type.',
+      'Verbose generics කෙටි කරලා readability වැඩි කරයි.',
+    ],
+    pitfalls: [
+      'Type එක obvious නොවෙන තැන් වල `var` overuse කරොත් readability අඩු වෙනවා (`var x = getThing();` — x මොකක්ද?).',
+      '`var` fields/parameters/return types වලට බෑ — local variables විතරයි.',
     ],
   },
 
   '3.2.3': {
     summary:
-      'Records (Java 14+) = immutable data carriers — constructor, getters, equals, hashCode, toString auto-generated.',
+      'Records (Java 14+) = immutable data carriers — `record Point(int x, int y) {}` එකෙන් constructor, accessors, `equals`, `hashCode`, `toString` **auto-generated**. DTOs, value objects වලට perfect.',
     sinhala: [
       {
-        heading: 'Boilerplate-free data',
-        body: '`record` එකකින් immutable data class එකක් එක line එකකින්. Fields (components) final, accessors auto (`name()`), `equals`/`hashCode`/`toString` auto. DTOs, value objects, API responses වලට perfect. Compact constructor එකෙන් validation දාන්න පුළුවන්.',
+        heading: 'කතාව: DTO එකකට boilerplate 50 lines',
+        body: 'Mortar API එකකට `SegmentDto` (id, name, count) වගේ simple data class එකක් ඕන. Traditional විදිහට — fields, constructor, getters 3ක්, `equals`, `hashCode`, `toString` — lines 50ක් boilerplate, actual data එක lines 3යි. Java 14 `record` — `record SegmentDto(String id, String name, long count) {}` — එක line එකක. Compiler ඉතුරු ඔක්කොම (constructor, accessors, equals/hashCode/toString) auto-generate කරනවා.',
+      },
+      {
+        heading: 'Records වල features',
+        body: 'Record එකකින් auto-generated:',
+        points: [
+          'Fields (components) — `private final` (immutable).',
+          'Canonical constructor — components ඔක්කොම parameters විදිහට.',
+          'Accessors — `name()` (getName() නෙවෙයි — component නමම).',
+          '`equals`/`hashCode` — components මත based (value equality); `toString` — readable.',
+          'Compact constructor එකෙන් validation දාන්න පුළුවන්.',
+        ],
       },
     ],
     analogy:
-      'Form template එකක් වගේ — fields කිව්වම, ඉතුරු ඔක්කොම (equals, toString) auto-fill වෙනවා.',
+      'Form template එකක් වගේ — fields මොනවද කිව්වම (id, name, count), ඉතුරු ඔක්කොම (print layout = toString, compare = equals) auto-fill වෙනවා. ඔයා data එක define කරනවා විතරයි; ceremony compiler කරනවා.',
     code: [
       {
-        filename: 'Records.java',
+        filename: 'RecordBasics.java',
         language: 'java',
-        code: `public record SegmentDto(String id, String name, long profileCount) {
-    // compact constructor: validation
-    public SegmentDto {
-        if (profileCount < 0) throw new IllegalArgumentException("negative count");
-    }
-}
+        code: `// එක line — constructor, accessors, equals/hashCode/toString auto
+public record SegmentDto(String id, String name, long profileCount) {}
 
 var dto = new SegmentDto("s1", "VIP", 1200);
-System.out.println(dto.name());     // auto accessor
-System.out.println(dto);            // auto toString`,
-        note: 'Immutable + equals/hashCode/toString නොමිලේ.',
+System.out.println(dto.name());        // "VIP" — auto accessor (getName() නෙවෙයි)
+System.out.println(dto);               // SegmentDto[id=s1, name=VIP, ...] — auto toString
+
+var same = new SegmentDto("s1", "VIP", 1200);
+System.out.println(dto.equals(same));  // true — value equality (auto equals)`,
+        note: 'record = immutable + equals/hashCode/toString නොමිලේ.',
+      },
+      {
+        filename: 'RecordValidation.java',
+        language: 'java',
+        code: `public record Money(double amount, String currency) {
+    // compact constructor — validation
+    public Money {
+        if (amount < 0) throw new IllegalArgumentException("negative amount");
+        if (currency == null) throw new IllegalArgumentException("currency null");
+        // fields auto-assign වෙනවා මෙතනට පස්සේ
+    }
+
+    // extra methods දාන්නත් පුළුවන්
+    public Money add(Money o) { return new Money(amount + o.amount, currency); }
+}`,
+        note: 'Compact constructor = validation/normalization.',
       },
     ],
     mortar:
-      'Mortar REST API DTOs (`SegmentDto`, `CustomerSummary`, `ChurnResult`) records විදිහට — immutable, concise, safe. equals/hashCode auto නිසා caching/dedup වලටත් හොඳයි.',
+      'Mortar REST API DTOs (`SegmentDto`, `CustomerSummary`, `ChurnResult`), value objects (`Money`, `RfmScore`), events (`CustomerResolvedEvent` — 8.3.2) records විදිහට — immutable, concise, safe. `equals`/`hashCode` auto නිසා caching, dedup, map keys වලටත් හොඳයි. Immutable නිසා concurrent code (2.4) වල safely share. Boilerplate 90% අඩු — Mortar codebase clean.',
     keyPoints: [
-      'record = immutable data carrier, auto members.',
-      'DTOs / value objects වලට ideal.',
+      'record = immutable data carrier — constructor/accessors/equals/hashCode/toString auto.',
+      'Accessors component-named (`name()`, getName() නෙවෙයි).',
       'Compact constructor = validation/normalization.',
+      'DTOs / value objects / events වලට ideal.',
+    ],
+    pitfalls: [
+      'Records immutable — mutable data ("setter" ඕන) වලට record නෙවෙයි.',
+      'Record component එකක් mutable object එකක් (List) නම්, defensive copy කරන්න (record shallow immutable).',
     ],
   },
 
   '3.2.4': {
     summary:
-      'Text blocks (Java 15+) = multi-line strings """...""" — JSON, SQL, HTML clean විදිහට.',
+      'Text blocks (Java 15+) = `"""..."""` multi-line string literals — JSON, SQL, HTML clean විදිහට, escape (`\\n`, `\\"`) නැතුව. Indentation auto-managed.',
     sinhala: [
       {
-        heading: 'Multi-line literals',
-        body: '`"""` වලින් multi-line string එකක් — escape (`\\n`, `\\"`) නැතුව. Indentation auto-strip. Embedded JSON, SQL, HTML readable විදිහට කෙලින්ම ලියන්න පුළුවන්.',
+        heading: 'කතාව: SQL query එකක් String එකේ ලියන අවුල',
+        body: 'Mortar analytics query එකක් String එකේ ලියන්න ඕන. Traditional විදිහට — `"SELECT country, SUM(spend) " + "FROM customers " + "WHERE brand_id = ? "` වගේ concatenation, `\\n` escapes, quotes escape... unreadable, error-prone. Java 15 text blocks — `"""` වලින් multi-line string එකක් කෙලින්ම, escaping නැතුව. SQL/JSON/HTML readable විදිහට.',
+      },
+      {
+        heading: 'Text block features',
+        body: 'මතක තියාගන්න:',
+        points: [
+          '`"""` වලින් පටන්, `"""` වලින් ඉවර — අතරේ multi-line content.',
+          'Escaping නෑ — `"`, newlines කෙලින්ම (SQL/JSON quotes clean).',
+          'Indentation auto-strip — closing `"""` එකේ position එකට relative.',
+          'Variables interpolation නෑ (Java) — `.formatted(...)` හෝ concatenation use කරන්න.',
+        ],
       },
     ],
     analogy:
-      'එක පේළියෙ දිග string එකක් වෙනුවට, කොළයක ලියනවා වගේ — pretty + read කරන්න ලේසි.',
+      'එක පේළියෙ දිග, escape-වලින් පිරුණු string එකක් වෙනුවට, notebook එකක කොළයක ලියනවා වගේ — pretty, read කරන්න ලේසි, මොකද තියෙන්නේ කියලා පැහැදිලි.',
     code: [
       {
         filename: 'TextBlocks.java',
         language: 'java',
-        code: `String query = """
+        code: `// SQL — escaping/concatenation නෑ, readable
+String query = """
     SELECT country, SUM(total_spend) AS revenue
     FROM customers
     WHERE brand_id = ?
@@ -615,132 +714,225 @@ System.out.println(dto);            // auto toString`,
     ORDER BY revenue DESC
     """;
 
+// JSON — quotes escape කරන්න ඕන නෑ
 String payload = """
-    { "segment": "VIP", "sync": "meta" }
+    { "segment": "VIP", "destination": "meta", "count": 1200 }
     """;`,
-        note: 'Escape/concat නැතුව readable SQL/JSON.',
+        note: 'Multi-line, no escaping — SQL/JSON readable.',
+      },
+      {
+        filename: 'TextBlockFormat.java',
+        language: 'java',
+        code: `// variables -> .formatted() (interpolation නෑ Java වල)
+String prompt = """
+    Analyze the customer segment "%s".
+    It has %d profiles with avg spend %.2f.
+    """.formatted(segmentName, count, avgSpend);`,
+        note: 'Values inject කරන්න .formatted() use කරන්න.',
       },
     ],
     mortar:
-      'Mortar native queries (JPQL/SQL), Copilot prompt templates, JSON payloads text blocks වලින් — read/maintain කරන්න ලේසි, escaping bugs නෑ.',
+      'Mortar native SQL/JPQL queries (7.4.6), AI Copilot / Helix prompt templates (PROJECT_IDEA 9), JSON payloads (connector requests, webhook bodies) text blocks වලින් — read/maintain කරන්න ලේසි, escaping bugs නෑ. Copilot prompts (multi-paragraph instructions) text blocks + `.formatted()` වලින් clean. Config templates, test fixtures වලටත් හොඳයි.',
     keyPoints: [
-      '""" ... """ = multi-line, no escaping.',
-      'SQL/JSON/HTML වලට readable.',
-      'Indentation auto-managed.',
+      '`""" ... """` = multi-line string, escaping නෑ.',
+      'SQL/JSON/HTML/prompts readable විදිහට.',
+      'Indentation auto-managed (closing `"""` position relative).',
+      'Variables → `.formatted(...)` (interpolation නෑ).',
+    ],
+    pitfalls: [
+      'Java text blocks වල string interpolation (`${var}`) නෑ — `.formatted()` හෝ concat use කරන්න.',
+      'Closing `"""` indentation එක output indentation එකට බලපානවා — align කරන්න.',
     ],
   },
 
   '3.2.5': {
     summary:
-      'Pattern matching (instanceof Java 16, switch Java 21) = type check + cast + bind එකට; concise branching.',
+      'Pattern matching: `instanceof` pattern (Java 16) — check + cast + bind එකපාරට. `switch` patterns (Java 21) — type/shape අනුව branch + deconstruct. Verbose casting code අඩු කරනවා.',
     sinhala: [
       {
-        heading: 'Check, cast, bind',
-        body: '`if (o instanceof Customer c)` — check + cast + variable bind එකපාරට. Switch pattern matching (Java 21) එකෙන් type/shape අනුව branch + deconstruct කරන්න පුළුවන් (records + sealed types එක්ක powerful). Verbose casting code අඩු කරනවා.',
+        heading: 'කතාව: check කරලා ආයෙ cast කරන double-work',
+        body: 'Mortar event pipeline එකේ `Object event` එකක් තියෙනවා. Traditional විදිහට — `if (event instanceof PurchaseEvent) { PurchaseEvent p = (PurchaseEvent) event; ... }` — check කරලා, ආයෙ cast කරලා, variable එකක් හදනවා. Repetitive. Java 16 `instanceof` pattern — `if (event instanceof PurchaseEvent p)` — check + cast + bind එකපාරට. Java 21 switch patterns මේක තව powerful කරනවා.',
+      },
+      {
+        heading: 'Pattern matching forms',
+        body: 'දෙ ආකාරයක්:',
+        points: [
+          'instanceof pattern (Java 16): `if (o instanceof Customer c)` — o Customer නම්, c කියලා typed variable එකක් bind.',
+          'switch pattern (Java 21): `case PurchaseEvent p ->` — type අනුව branch, p bound.',
+          'Record deconstruction: `case Point(int x, int y) ->` — components කෙලින්ම extract.',
+          'Guards: `case Customer c when c.spend() > 1000 ->` — extra condition.',
+        ],
       },
     ],
     analogy:
-      '"මේක Customer එකක්ද? නම් c කියලා use කරන්න" කියලා එක step එකෙන් — check කරලා ආයෙ cast කරන double-work නෑ.',
+      '"මේක Customer එකක්ද? නම් c කියලා use කරන්න" කියලා එක step එකෙන් (pattern matching) — check කරලා ආයෙ cast කරන double-work නෑ. Mail sorting වගේ — "මේක bill එකක් නම් මේ ගොඩට, letter එකක් නම් අර ගොඩට" (switch patterns).',
     code: [
       {
-        filename: 'PatternMatching.java',
+        filename: 'InstanceofPattern.java',
         language: 'java',
         code: `Object event = nextEvent();
 
-// instanceof pattern
-if (event instanceof PurchaseEvent p) {
-    record(p.amount());           // p already typed & bound
-}
+// OLD: check + cast + variable (double-work)
+// if (event instanceof PurchaseEvent) {
+//     PurchaseEvent p = (PurchaseEvent) event;
+//     record(p.amount());
+// }
 
-// switch pattern (Java 21)
+// NEW: instanceof pattern — check + cast + bind එකපාරට
+if (event instanceof PurchaseEvent p) {   // p already typed + bound
+    record(p.amount());
+}`,
+        note: 'Check + cast + bind එකපාරට — casting boilerplate නෑ.',
+      },
+      {
+        filename: 'SwitchPattern.java',
+        language: 'java',
+        code: `// switch pattern (Java 21) — type අනුව branch, deconstruct, guards
 String label = switch (event) {
+    case PurchaseEvent p when p.amount() > 1000 -> "big spender";  // guard
     case PurchaseEvent p -> "spent " + p.amount();
     case ChurnEvent c    -> "churn risk " + c.score();
+    case null            -> "no event";
     default              -> "unknown";
 };`,
-        note: 'Check + cast + bind එකපාරට — clean branching.',
+        note: 'switch + patterns + guards = concise, type-safe branching.',
       },
     ],
     mortar:
-      'Mortar event-driven pipeline එකේ heterogeneous events (Purchase, Churn, Sync) pattern matching switch එකකින් handle කරනවා — type-safe, concise, sealed event hierarchy එක්ක exhaustive.',
+      'Mortar event-driven pipeline (8.3.3) එකේ heterogeneous events (Purchase, Churn, Sync, Resolution) pattern-matching switch එකකින් handle කරනවා — type-safe, concise, sealed event hierarchy (3.2.6) එක්ක exhaustive (හැම case එකම handle කරලාද compiler verify). Copilot response types, DSP audience shapes වගේ tagged data pattern matching වලින්. Verbose `instanceof` + cast ladders අතීතයට.',
     keyPoints: [
-      'instanceof pattern = check+cast+bind (Java 16).',
-      'switch patterns + records + sealed (Java 21) = exhaustive.',
-      'Casting boilerplate අඩු.',
+      'instanceof pattern (Java 16) = check + cast + bind එකපාරට.',
+      'switch patterns (Java 21) = type-based branching + deconstruction + guards.',
+      'Records + sealed types (3.2.6) එක්ක exhaustive switches.',
+      'Casting boilerplate + if-instanceof ladders අඩු කරයි.',
+    ],
+    pitfalls: [
+      'Pattern variable scope — `if (o instanceof C c)` වල c true-branch එකට විතරයි.',
+      'switch pattern exhaustiveness sealed types (3.2.6) එක්ක විතරයි compiler-guaranteed (නැත්නම් default ඕන).',
     ],
   },
 
   '3.2.6': {
     summary:
-      'Sealed classes (Java 17) = subclass කරන්න පුළුවන් කවුද කියලා restrict කරනවා — controlled hierarchies.',
+      'Sealed classes (Java 17) = `sealed ... permits A, B, C` වලින් type එකක් extend/implement කරන්න පුළුවන් **කවුද** කියලා restrict කරනවා — controlled, closed hierarchies. Exhaustive switches (3.2.5) වලට පදනම.',
     sinhala: [
       {
-        heading: 'Restricted inheritance',
-        body: '`sealed ... permits A, B, C` වලින්, hierarchy එකක් extend කරන්න පුළුවන් classes ලැයිස්තුව fix කරනවා. Subclasses `final`, `sealed`, හෝ `non-sealed` වෙන්නම ඕන. Switch pattern matching එකේ exhaustiveness compiler verify කරන්න පුළුවන් — නව case එකක් add කලොත් compile error.',
+        heading: 'කතාව: segment types 7ක් — වැඩිත් නෑ, අඩුත් නෑ',
+        body: 'Mortar වල behavioural segments හරියටම 7ක් තියෙනවා (VIP, Committed, Dormant...). මේ hierarchy එක "closed" — random කෙනෙක්ට අලුත් Segment subtype එකක් හදන්න දෙන්න ඕන නෑ. තව, switch එකක segments handle කරද්දී — අලුත් segment එකක් add කලොත් "මේකත් handle කරන්න" කියලා compiler එකෙන් force කරන්න ඕන. Normal class/interface වලට මේක බෑ (ඕන කෙනෙක්ට extend කරන්න පුළුවන්). ඒකට `sealed`.',
+      },
+      {
+        heading: 'Sealed rules',
+        body: 'මතක තියාගන්න:',
+        points: [
+          '`sealed interface X permits A, B, C` — X implement කරන්න පුළුවන් A, B, C විතරයි (closed set).',
+          'Permitted subtypes `final`, `sealed`, හෝ `non-sealed` වෙන්නම ඕන (further extension control).',
+          'switch එකක permits ඔක්කොම handle කලොත් — exhaustive (default ඕන නෑ, compiler verify).',
+          'අලුත් subtype එකක් add කලොත් — switches වල compile error ("මේකත් handle කරන්න") — safety.',
+        ],
       },
     ],
     analogy:
-      'Guest list එකක් වගේ — "මේ අයට විතරයි ඇතුල් වෙන්න පුළුවන්". හැම possibility එකම දන්නවා.',
+      'Guest list එකක් වගේ — "මේ අයට විතරයි ඇතුල් වෙන්න පුළුවන්" (permits). හැම possibility එකම දන්නවා. අලුත් කෙනෙක් list එකට add කලොත්, security (compiler) කියනවා "මේ අලුත් කෙනාට මොකද කරන්නේ කියලා decide කරන්න".',
     code: [
       {
-        filename: 'Sealed.java',
+        filename: 'SealedSegments.java',
         language: 'java',
-        code: `public sealed interface Segment permits Vip, Committed, Dormant {}
+        code: `// closed hierarchy — permits ලැයිස්තුවේ ඒවා විතරයි implement කරන්න පුළුවන්
+public sealed interface Segment permits Vip, Committed, Dormant {}
 
 public record Vip(double spend) implements Segment {}
 public record Committed(int orders) implements Segment {}
 public record Dormant(long daysIdle) implements Segment {}
-
-// exhaustive switch - compiler checks all cases handled
+// වෙන කෙනෙක්ට Segment implement කරන්න බෑ (closed)`,
+        note: 'permits = closed set of subtypes.',
+      },
+      {
+        filename: 'ExhaustiveSwitch.java',
+        language: 'java',
+        code: `// sealed + switch pattern = exhaustive (default ඕන නෑ)
 String action = switch (segment) {
-    case Vip v       -> "reward";
+    case Vip v       -> "reward " + v.spend();
     case Committed c -> "upsell";
     case Dormant d   -> "win-back";
-};`,
-        note: 'permits list fixed → switch exhaustive (default ඕන නෑ).',
+    // permits ඔක්කොම handle කරා -> default ඕන නෑ (compiler verify)
+};
+// අලුත් segment එකක් (Lapsed) add කලොත් -> මෙතන compile error!`,
+        note: 'permits list fixed → switch exhaustive → අලුත් case එකක් "force" වෙනවා.',
       },
     ],
     mortar:
-      'Mortar 7 behavioural segments (VIP, Committed, Dormant...) sealed hierarchy එකක් — නව segment එකක් add කලොත් handling code එකේ compile error එකෙන් "මේකත් handle කරන්න" කියලා ensure කරනවා. Type-safe domain modelling.',
+      'Mortar 7 behavioural segments (VIP, Committed, Dormant, New, One-Off, Lapsed, Sporadic-VIP — PROJECT_IDEA 3.1) `sealed` hierarchy එකක් — අලුත් segment එකක් add කලොත් handling code එකේ compile error එකෙන් "මේකත් handle කරන්න" කියලා ensure කරනවා (missed cases නෑ). Churn statuses (Active/Soft/Hard), event types, Copilot response variants වගේ closed sets sealed types වලින් model කරලා, exhaustive pattern matching (3.2.5) — type-safe domain modelling.',
     keyPoints: [
-      'sealed + permits = closed set of subtypes.',
-      'Subtypes final/sealed/non-sealed.',
-      'Exhaustive switches (compiler-verified).',
+      '`sealed ... permits` = closed set of subtypes.',
+      'Permitted subtypes final/sealed/non-sealed වෙන්නම ඕන.',
+      'Exhaustive switches (compiler-verified — default ඕන නෑ).',
+      'අලුත් subtype = switches වල compile error (safety).',
+    ],
+    pitfalls: [
+      'Permitted subtypes එකම module/package එකේ (හෝ same file) වෙන්නම ඕන.',
+      'Sealed hierarchy වෙනස් කරන එක (subtype add) downstream switches ඔක්කොම update කරන්න force කරනවා — closed නිසාම.',
     ],
   },
 
   '3.2.7': {
     summary:
-      'Virtual threads (Loom, Java 21) = lightweight threads millions ගණන් — high-concurrency IO cheaply.',
+      'Virtual threads (Project Loom, Java 21) = lightweight threads **millions ගණන්** run කරන්න පුළුවන් — high-concurrency IO cheaply. Blocking IO වලදී carrier thread එක free වෙනවා. "thread-per-request" simple style එකෙන් massive scale.',
     sinhala: [
       {
-        heading: 'Cheap concurrency',
-        body: 'Platform threads OS threads (expensive, thousands limit). Virtual threads JVM-managed, super lightweight — millions run කරන්න පුළුවන්. Blocking IO call එකකදී virtual thread එක "unmount" වෙලා carrier thread එක free කරනවා. "thread-per-request" simple style එකෙන් massive scale. `Executors.newVirtualThreadPerTaskExecutor()`.',
+        heading: 'කතාව: millions of API calls',
+        body: 'Mortar enrichment එකට millions of customers external APIs (geocode, email-validate) call කරන්න ඕන — හැම එකක්ම IO-bound (network එකට බලාගෙන). Platform threads (OS threads) expensive — thousands විතරයි හදන්න පුළුවන් (memory). Pool එකකින් millions of blocking calls කරන්න බෑ (threads block වෙලා idle). Java 21 virtual threads — JVM-managed, super lightweight, **millions** හදන්න පුළුවන්. Blocking call එකකදී virtual thread එක "unmount" වෙලා OS thread එක free කරනවා.',
+      },
+      {
+        heading: 'Virtual threads වැඩ කරන විදිහ',
+        body: 'තේරුම්ගන්න:',
+        points: [
+          'Platform thread = OS thread (expensive, ~thousands limit, MB stack).',
+          'Virtual thread = JVM-managed, cheap (~millions, KB), few carrier OS threads මත run.',
+          'Blocking IO call එකකදී — virtual thread එක carrier එකෙන් unmount වෙනවා, carrier එක වෙන virtual thread එකකට free.',
+          '"thread-per-request/task" simple blocking code එකෙන් massive concurrency — thread-pool tuning අවුල් නෑ.',
+        ],
       },
     ],
     analogy:
-      'Expensive full-time employees (platform threads) වෙනුවට, ඕන තරම් cheap freelancers (virtual threads) — blocking වුනොත් desk එක වෙන කෙනෙකුට.',
+      'Expensive full-time employees (platform threads) — company එකට කීදෙනෙක් තියාගන්න පුළුවන්ද සීමිතයි. Virtual threads = ඕන තරම් cheap freelancers — කෙනෙක් break එකක් (blocking IO) ගත්තම desk එක (carrier thread) වෙන කෙනෙකුට. Desks ටිකයි, freelancers මිලියන ගණන්.',
     code: [
       {
         filename: 'VirtualThreads.java',
         language: 'java',
-        code: `try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        code: `// millions of IO-bound tasks — virtual threads cheaply
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     for (Customer c : millionsOfCustomers) {
         executor.submit(() -> {
-            var data = callExternalApi(c);   // blocking IO is cheap here
-            repo.save(enrich(c, data));
+            var geo = geocodeApi(c.getAddress());   // blocking IO — cheap here!
+            var valid = validateEmail(c.getEmail()); // blocking IO
+            repo.save(enrich(c, geo, valid));
         });
     }
-} // all virtual threads complete`,
-        note: 'Blocking IO tasks දහස්/ලක්ෂ ගණන් cheaply.',
+}   // ඔක්කොම virtual threads complete වෙනකම් (auto)`,
+        note: 'Blocking IO tasks දහස්/ලක්ෂ ගණන් — thread-per-task, cheap.',
+      },
+      {
+        filename: 'CreateVirtualThread.java',
+        language: 'java',
+        code: `// single virtual thread
+Thread.ofVirtual().start(() -> System.out.println("virtual!"));
+
+// platform (OS) thread — expensive, few
+Thread.ofPlatform().start(() -> System.out.println("platform"));`,
+        note: 'Thread.ofVirtual() = cheap; ofPlatform() = OS thread.',
       },
     ],
     mortar:
-      'Mortar millions of customers external APIs (geocode, email-validate) call කරන IO-bound enrichment වලට virtual threads — thread-per-task simple code එකෙන් huge concurrency, thread-pool tuning අවුල් නැතුව.',
+      'Mortar millions of customers external APIs (geocode, email-validate, gender-inference — PROJECT_IDEA 2.4) call කරන IO-bound enrichment වලට virtual threads — thread-per-task simple blocking code එකෙන් huge concurrency, thread-pool sizing අවුල් නැතුව. Connector syncs, webhook handlers වගේ IO-heavy work virtual threads වලින් scale. CPU-bound work (churn scoring — 3.1.4.2) වලට platform threads/parallel streams තාම හොඳයි (virtual threads IO වලට).',
     keyPoints: [
-      'Virtual threads = lightweight, millions scale.',
-      'IO-bound / thread-per-request වලට ideal.',
-      'CPU-bound වලට platform threads/pools තාම හොඳයි.',
+      'Virtual threads = lightweight, millions scale (platform threads thousands).',
+      'Blocking IO වලදී carrier OS thread free වෙනවා (unmount).',
+      'IO-bound / thread-per-request වලට ideal — pool tuning අවුල් නෑ.',
+      'CPU-bound වලට platform threads / parallel streams තාම හොඳයි.',
+    ],
+    pitfalls: [
+      'CPU-bound work virtual threads වලින් speedup නෑ (cores සීමිතයි) — IO-bound වලට විතරයි.',
+      'synchronized blocks ඇතුලේ දිග blocking = carrier thread "pin" වෙනවා (unmount නෑ) — ReentrantLock prefer.',
     ],
   },
 };
