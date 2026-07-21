@@ -1208,100 +1208,218 @@ class Order {
 
   '1.3.1': {
     summary:
-      'Access modifiers (private, default, protected, public) = member එකකට කොහෙන් access කරන්න පුළුවන්ද කියලා control කරනවා.',
+      'Access modifiers (`private`, default, `protected`, `public`) = class එකක member එකකට (field/method) කොහෙන් access කරන්න පුළුවන්ද කියලා control කරන keywords. Encapsulation එකේ practical tools.',
     sinhala: [
       {
-        heading: 'Visibility levels 4',
-        body: '`private` — same class විතරයි. `default` (no keyword) — same package. `protected` — same package + subclasses (වෙන packages වලත්). `public` — හැම තැනම. Encapsulation එකට හැමවිටම හැකි අඩුම visibility එක දෙන්න (least privilege).',
+        heading: 'කතාව: SSN එකට කවුද අත දාන්න පුළුවන් වෙන්න ඕන?',
+        body: 'Mortar customer record එකක SSN (sensitive), internal DB id, segment, email වගේ දේවල් තියෙනවා. මේ හැම එකකටම එකම මට්ටමේ access දෙන්න හොඳ නෑ — SSN එක code එකේ ඕන තැනකින් read කරන්න පුළුවන් නම් security risk එකක්. Email එක නම් හැමෝටම පේන්න ඕන. ඉතින් "කුමන member එකට කවුද access කරන්න පුළුවන්ද" කියලා control කරන්න ක්‍රමයක් ඕන — ඒකට තමයි access modifiers.',
+      },
+      {
+        heading: 'Visibility levels 4 (අඩුම → වැඩිම)',
+        body: 'Java වල visibility මට්ටම් 4ක් තියෙනවා:',
+        points: [
+          '`private` — එම class එක ඇතුලේ **විතරයි**. සම්පූර්ණයෙන් hidden (sensitive data, internal helpers).',
+          'default (keyword එකක් නෑ) — එම **package** එකේ classes වලට විතරයි ("package-private").',
+          '`protected` — එම package + **subclasses** වලට (වෙන packages වල subclasses වුනත්). Inheritance/extension වලට.',
+          '`public` — **හැම තැනම** access කරන්න පුළුවන්. Stable API එකට විතරයි.',
+        ],
+      },
+      {
+        heading: 'රීතිය: least privilege',
+        body: 'හැමවිටම හැකි **අඩුම visibility එක** දෙන්න (least privilege). Default විදිහට `private` කරලා, ඇත්තටම expose කරන්න ඕන දේ විතරක් `public` කරන්න. මේකෙන් encapsulation (1.1.4) එක එනවා — outside code එකට internal details වලට depend වෙන්න බෑ, ඒ නිසා ඒවා නිදහසේ වෙනස් කරන්න පුළුවන්.',
       },
     ],
     analogy:
-      'ගෙදර කාමර වගේ: private = ඔයාගේ bedroom, default = ගෙදර අය, protected = පවුලයි relations ලයි, public = හැමෝටම open living room.',
+      'ගෙදරක කාමර වගේ: `private` = ඔයාගේ bedroom (ඔයාට විතරයි), default = ගෙදර අයට (එකම package), `protected` = පවුලයි relations ලයි (subclasses), `public` = හැමෝටම open living room. හැම දෙයක්ම living room එකේ තියන්නෙ නෑ — වටිනා දේවල් bedroom එකේ.',
     code: [
       {
-        filename: 'AccessDemo.java',
+        filename: 'CustomerRecord.java',
         language: 'java',
         code: `public class CustomerRecord {
-    private String ssn;          // only this class
-    String internalId;           // package-private
-    protected String segment;    // subclasses + package
-    public String email;         // everyone
+    private String ssn;          // 🔒 මේ class එක ඇතුලේ විතරයි (most restricted)
+    String internalId;           // 📦 එකම package එකේ classes වලට (default)
+    protected String segment;    // 👨‍👩‍👧 subclasses + package වලට
+    public String email;         // 🌍 හැම තැනම (least restricted)
 
-    private void encryptSsn() { /* ... */ }        // hidden helper
-    public String getEmailMasked() { return "***"; } // safe API
+    private void encryptSsn() {   // internal helper — hidden
+        // encryption logic
+    }
+
+    // safe public API — SSN එක කෙලින්ම දෙන්නෙ නෑ, masked විදිහට
+    public String getSsnMasked() {
+        return "***-**-" + ssn.substring(ssn.length() - 4);
+    }
 }`,
-        note: 'sensitive data private; safe API public.',
+        note: 'Sensitive data `private`; safe, masked view එක විතරයි `public`.',
+      },
+      {
+        filename: 'WhoCanAccess.java',
+        language: 'java',
+        code: `CustomerRecord c = new CustomerRecord();
+
+c.email;              // ✅ public — ඕන තැනකින්
+// c.ssn;             //  private — CustomerRecord එකෙන් පිට බෑ
+// c.internalId;      //  default — වෙන package එකකින් නම් බෑ
+// c.encryptSsn();    //  private helper — පිටින් බෑ
+
+c.getSsnMasked();     // ✅ safe API — masked value විතරයි ලැබෙන්නේ`,
+        note: 'private members class එකෙන් පිට access කරන්න බෑ — compile error.',
       },
     ],
     mortar:
-      'Mortar customer records වල SSN/phone වගේ sensitive fields `private` + encrypted. Public API එකෙන් masked/authorised views විතරයි. ඒ නිසා අහම්බෙන් sensitive data leak වෙන්නෙ නෑ.',
+      'Mortar customer records වල SSN/phone වගේ sensitive fields `private` + encrypted. Public API එකෙන් masked හෝ role-authorised views විතරයි expose කරන්නේ. Internal DB ids default (package-private) — resolution package එකට විතරයි. ඒ නිසා අහම්බෙන් sensitive data leak වෙන්නෙ නෑ, සහ role-based access control (PROJECT_IDEA 10.5) enforce කරන්න පුළුවන්.',
     keyPoints: [
       'private < default < protected < public (least → most visible).',
-      'Least-privilege: default විදිහට හැකි තරම් අඩු visibility.',
-      'protected = package + subclasses (subclass access for extension).',
+      'Least-privilege: default විදිහට හැකි තරම් අඩු visibility දෙන්න.',
+      '`protected` = package + subclasses (extension වලට access).',
+      'default (keyword නෑ) = package-private — public නෙවෙයි!',
+    ],
+    pitfalls: [
+      'Field එකකට keyword එකක් නොදැම්මම ඒක `public` නෙවෙයි — default (package-private). මේක බොහෝ අය වරදවා තේරුම් ගන්නවා.',
+      '`protected` fields subclasses වලට expose වෙන නිසා, ඒවා පරෙස්සමින් — over-exposing = tight coupling.',
     ],
   },
 
   '1.3.2': {
     summary:
-      'static = class එකට අයිති (object එකකට නෙවෙයි). Variables, methods, blocks, nested classes සඳහා.',
+      '`static` = member එක **class එකට** අයිති, object එකකට නෙවෙයි. හැම object එකකම එකම copy එකයි share කරන්නේ. Variables, methods, blocks, nested classes වලට use කරන්න පුළුවන්.',
     sinhala: [
       {
-        heading: 'Class-level members',
-        body: '`static` field එකක් objects හැම එකකම share වෙනවා (එක copy එකයි, class එකට අයිති). `static` method එකකට instance එකක් නැතුව call කරන්න පුළුවන් (`Utils.x()`), ඒත් `this` access කරන්න බෑ. `static` block එක class load වෙනකොට එක පාරක් run වෙනවා (init). Static nested class එකට outer instance එකක් ඕන නෑ.',
+        heading: 'කතාව: හැම customer object එකකටම වෙන වෙනම ඕන නැති දේවල්',
+        body: 'හිතන්න ඔයාට Mortar record ids generate කරන්න counter එකක් ඕන — `MC1`, `MC2`, `MC3`... දැන් මේ counter එක `Customer` object එකක field එකක් කරොත්? හැම customer කෙනෙක්ටම වෙන වෙනම counter එකක් — ඒක වැරදියි! ඕන වෙන්නේ **හැම object එකම share කරන එකම counter** එකක්. ඒ වගේම — `PREFIX = "MC"` වගේ constant එකකට customer කෙනෙක් object එකක් ඕන නෑ. මේ "class එකට අයිති, objects අතර share වෙන" දේවල් වලට තමයි `static`.',
+      },
+      {
+        heading: 'static යෙදෙන තැන් 4',
+        body: '`static` keyword එක යොදන්න පුළුවන් තැන් 4ක්:',
+        points: [
+          '`static` **field** — හැම object එකකම share වෙන එක copy එකයි (class එකට අයිති). උදා: counter, config.',
+          '`static` **method** — object එකක් නැතුව `ClassName.method()` විදිහට call කරන්න පුළුවන් (utility/factory). ඒත් `this` access කරන්න බෑ.',
+          '`static` **block** — class එක load වෙනකොට **එක පාරක්** run වෙනවා (static fields initialize කරන්න).',
+          '`static` **nested class** — outer class instance එකක් නැතුව හදන්න පුළුවන් nested class.',
+        ],
+      },
+      {
+        heading: 'වැදගත් රීතිය: static → instance access බෑ',
+        body: '`static` method එකකට `this` නෑ (object එකක් නැති නිසා), ඒ නිසා instance fields/methods කෙලින්ම access කරන්න බෑ. ඒත් instance methods වලට static members access කරන්න පුළුවන්. `static final` = constant (class-owned, වෙනස් වෙන්නෙ නෑ) — මේක safe. ඒත් `static` mutable state (share වෙන, වෙනස් වෙන) thread-safety අවුල් ගේනවා.',
       },
     ],
     analogy:
-      'Company එකක staff count එක වගේ — හැම employee කෙනෙක්ටම වෙන වෙනම නෑ, එක shared number එකයි (static). ඒත් employee කෙනෙක්ගේ name එක instance-specific.',
+      'Company එකක "staff count" එක වගේ — හැම employee කෙනෙක්ටම වෙන වෙනම නෑ, එක shared number එකයි (static, company එකට අයිති). ඒත් employee කෙනෙක්ගේ "name" එක instance-specific (හැමෝටම වෙනස්). Company logo (static final) හැමෝටම එකයි, වෙනස් වෙන්නෙත් නෑ.',
     code: [
       {
         filename: 'IdGenerator.java',
         language: 'java',
         code: `public class IdGenerator {
-    private static long counter = 0;      // shared across all objects
-    public static final String PREFIX = "MC"; // constant
+    // static field: හැම call එකකම share වෙන එකම counter (class-owned)
+    private static long counter = 0;
 
-    static { System.out.println("IdGenerator loaded"); } // static block
+    // static final: constant — class එකට අයිති, වෙනස් වෙන්නෙ නෑ
+    public static final String PREFIX = "MC";
 
-    public static synchronized String next() { // no instance needed
+    // static block: class එක load වෙනකොට එක පාරක් run වෙනවා
+    static {
+        System.out.println("IdGenerator load වුණා");
+    }
+
+    // static method: object එකක් නැතුව call කරන්න පුළුවන්
+    public static synchronized String next() {   // thread-safe counter
         return PREFIX + (++counter);
     }
-}
+}`,
+        note: 'counter share වෙනවා; next() object එකක් නැතුව call කරනවා.',
+      },
+      {
+        filename: 'UsingStatic.java',
+        language: 'java',
+        code: `// object එකක් 'new' කරන්නෙ නැතුව class name එකෙන් කෙලින්ම:
+String id1 = IdGenerator.next();   // MC1
+String id2 = IdGenerator.next();   // MC2  (එකම shared counter)
+String id3 = IdGenerator.next();   // MC3
 
-String id1 = IdGenerator.next(); // MC1
-String id2 = IdGenerator.next(); // MC2`,
-        note: 'counter එක shared — object එකක් හදන්නෙ නැතුව call කරනවා.',
+System.out.println(IdGenerator.PREFIX); // MC (constant)
+
+// IdGenerator g = new IdGenerator(); g.next();  // වැඩ කරයි, ඒත් static call එක හරි විදිහ`,
+        note: 'static members class name එකෙන් access කරනවා — object එකක් ඕන නෑ.',
+      },
+      {
+        filename: 'StaticCannotSeeInstance.java',
+        language: 'java',
+        code: `class Customer {
+    private String email;                    // instance field
+
+    static String describe() {
+        // return email;   //  ERROR: static method එකට instance field බෑ ('this' නෑ)
+        return "a customer";
+    }
+
+    String getEmail() { return email; }      // instance method — email access OK
+}`,
+        note: 'static method එකට instance members / `this` access කරන්න බෑ.',
       },
     ],
     mortar:
-      'Mortar internal record IDs generate කරන්න static counter/utility එකක් පාවිච්චි කරන්න පුළුවන්. Config constants (`PREFIX`) static final විදිහට එක තැනක. ඒත් shared mutable static state එකේ thread-safety ගැන පරෙස්සම් වෙන්න ඕන.',
+      'Mortar වල internal record ids generate කරන්න static counter/utility එකක්; config constants (`PREFIX`, API versions) `static final` විදිහට එක තැනක. Utility classes (Validators, DateUtils) static methods. ඒත් — shared mutable static state (`counter`) multiple threads වලින් access වෙනකොට race conditions; ඒ නිසා `synchronized`/`AtomicLong` (2.4.6) වලින් protect කරන්නම ඕන. Constants (immutable) නම් safe.',
     keyPoints: [
-      'static = class-owned, shared single copy.',
-      'static method එකෙන් instance members / `this` access කරන්න බෑ.',
-      'static block = class-load-time initialization.',
+      '`static` = class-owned, හැම object එකකම share වෙන එක copy එකයි.',
+      'static method → object එකක් නැතුව call; `this`/instance members access කරන්න බෑ.',
+      'static block = class-load-time (එක පාරක්) initialization.',
+      '`static final` = constant (safe); static mutable state = thread-safety අවුල්.',
     ],
     pitfalls: [
-      'Mutable static state = concurrency bugs + testing අමාරුයි. Constants (`static final`) වලට ලඟුයි.',
+      'Mutable static state = concurrency bugs + unit testing අමාරුයි (shared global state). හැකි නම් `static final` constants වලට සීමා කරන්න.',
+      'static method එකක් instance behaviour එකක් වගේ override කරන්න බෑ — static methods "hidden" වෙනවා, polymorphic නෙවෙයි.',
     ],
   },
 
   '1.3.3': {
     summary:
-      'final = වෙනස් කරන්න බැරි. Variable (constant), method (override බෑ), class (extend බෑ).',
+      '`final` = "locked, වෙනස් කරන්න බෑ". තැන් 3ක යෙදෙනවා: variable (එක පාරයි assign), method (override බෑ), class (extend බෑ). Immutability + safety එකට key tool එකක්.',
     sinhala: [
       {
-        heading: 'තුන් වර්ගය',
-        body: '`final` variable එකක් එක පාරක් assign කරලා ආයෙ වෙනස් කරන්න බෑ (constant / immutable reference). `final` method එකක් subclass එකකින් override කරන්න බෑ. `final` class එකක් extend කරන්න බෑ (උදා: `String`). Immutability, safety, thread-safety වලට final ගොඩක් වැදගත්.',
+        heading: 'කතාව: brandId එක මැදදී වෙනස් වුනොත්?',
+        body: 'Mortar sync job එකක් brandId එකක් අරන් වැඩ කරනවා. හිතන්න job එක මැද්දේ අහම්බෙන් `brandId = "other-brand"` වගේ වෙනස් වුනොත් — වෙන brand එකකට data leak! මේ වගේ දේවල් "එක පාරක් set කරලා ආයෙ වෙනස් වෙන්නෙ නෑ" කියලා guarantee කරන්න පුළුවන් නම් bugs ගොඩක් වළක්වන්න පුළුවන්. ඒකට තමයි `final`. Compiler එකෙන්ම වෙනස් කරන එක වළක්වනවා.',
+      },
+      {
+        heading: 'final යෙදෙන තැන් 3',
+        body: '`final` keyword එක තැන් 3ක යෙදෙනවා, තුනටම තේරුම "වෙනස් කරන්න බෑ":',
+        points: [
+          '`final` **variable/field** — එක පාරක් assign කරලා ආයෙ වෙනස් කරන්න බෑ (constant / immutable reference).',
+          '`final` **method** — subclass එකකින් override කරන්න බෑ (behaviour එක lock — security/correctness).',
+          '`final` **class** — extend කරන්න බෑ (subclass හදන්න බෑ). උදා: `String`, `Integer` — final classes.',
+          'Parameters `final` කරන්නත් පුළුවන් — method එක ඇතුලේ ඒ parameter reassign කරන්න බෑ.',
+        ],
+      },
+      {
+        heading: 'ඇයි final වැදගත්: immutability + thread-safety',
+        body: 'Fields ඔක්කොම `final` වුනු object එකක් "immutable" — හදාපු පස්සේ state වෙනස් වෙන්නෙ නෑ. Immutable objects: (1) predictable — කවදාවත් වෙනස් වෙන්නෙ නෑ නිසා reasoning ලේසි. (2) thread-safe — multiple threads share කරන්න lock ඕන නෑ (වෙනස් වෙන්නෙ නැති නිසා). (3) safe map keys — hashCode වෙනස් වෙන්නෙ නෑ. ඒ නිසා concurrent code එකට immutable objects රත්තරන්.',
       },
     ],
     analogy:
-      'Contract එකක් sign කලාට පස්සේ වෙනස් කරන්න බෑ වගේ — final කලාට පස්සේ ඒක "locked".',
+      'Contract එකක් sign කරලා notarize කලාට පස්සේ වගේ — වෙනස් කරන්න බෑ, "locked". `final` variable = ink pen එකෙන් ලිව්ව value එකක් (මකන්න බෑ); `final` class = "මේ design එක extend කරන්න එපා" කියලා sealed.',
     code: [
       {
-        filename: 'FinalDemo.java',
+        filename: 'FinalVariable.java',
         language: 'java',
-        code: `public final class Money {          // cannot be extended
-    private final double amount;    // set once, immutable
+        code: `class SyncJob {
+    private final String brandId;         // එක පාරයි assign කරන්න පුළුවන්
+
+    SyncJob(String brandId) {
+        this.brandId = brandId;           // constructor එකේදී set (OK)
+    }
+
+    void run() {
+        // brandId = "other-brand";       //  COMPILE ERROR — final, වෙනස් බෑ
+        System.out.println("syncing " + brandId);  // safe: කවදාවත් වෙනස් වෙන්නෙ නෑ
+    }
+}`,
+        note: 'brandId එක job එක පුරාවටම එකයි — අහම්බෙන් වෙනස් වෙන්න බෑ.',
+      },
+      {
+        filename: 'ImmutableMoney.java',
+        language: 'java',
+        code: `// final class -> extend කරන්න බෑ; final fields -> immutable value object
+public final class Money {
+    private final double amount;          // immutable
     private final String currency;
 
     public Money(double amount, String currency) {
@@ -1309,245 +1427,494 @@ String id2 = IdGenerator.next(); // MC2`,
         this.currency = currency;
     }
 
-    public final double getAmount() { return amount; } // cannot override
+    public final double getAmount() { return amount; }  // override කරන්න බෑ
+
+    // "වෙනස් කරන" එකක් ඕන නම් අලුත් object එකක් return කරනවා (immutable pattern)
+    public Money add(Money other) {
+        return new Money(this.amount + other.amount, currency);  // new object
+    }
 }`,
-        note: 'Immutable value object — thread-safe by design.',
+        note: 'Immutable — thread-safe by design; "වෙනස් කිරීම" = අලුත් object එකක්.',
+      },
+      {
+        filename: 'FinalIsNotDeep.java',
+        language: 'java',
+        code: `// පරෙස්සම්: final reference ≠ deeply immutable
+final List<String> ids = new ArrayList<>();
+
+ids.add("a");        // ✅ OK! list එකේ CONTENT වෙනස් කරන්න පුළුවන්
+ids.add("b");        // ✅ OK
+
+// ids = new ArrayList<>();  //  ERROR — reference එක වෙනස් කරන්න බෑ (final)`,
+        note: 'final = reference lock; ඒත් point කරන object එකේ ඇතුළ වෙනස් වෙන්න පුළුවන්.',
       },
     ],
     mortar:
-      'Mortar වල Money, brandId වගේ value objects `final` fields වලින් immutable කරනවා. Immutable objects concurrent identity-resolution / prediction jobs වලදී safely share කරන්න පුළුවන් — lock ඕන නෑ.',
+      'Mortar වල `Money`, `brandId`, DTOs (records — 3.2.3) වගේ value objects `final` fields වලින් immutable කරනවා. Identity-resolution / churn-prediction jobs millions of objects concurrent threads වල process කරනවා — immutable objects නිසා ඒවා lock නැතුව safely share කරන්න පුළුවන් (thread-safety නොමිලේ). brandId `final` නිසා multi-tenant data leak වගේ bugs compile-time එකේම වළක්වනවා.',
     keyPoints: [
-      'final variable = assign-once (immutable reference).',
-      'final method = no override; final class = no extend.',
-      'Immutability → thread-safety + predictability.',
+      '`final` variable = assign-once (immutable reference).',
+      '`final` method = override බෑ; `final` class = extend බෑ (උදා: String).',
+      'Fields ඔක්කොම final = immutable object → predictable + thread-safe.',
+      'Immutable objects concurrent code එකේ lock නැතුව share කරන්න පුළුවන්.',
     ],
     pitfalls: [
-      'final reference එකක් immutable වුනත්, ඒක point කරන object එකේ internal state වෙනස් වෙන්න පුළුවන් (final != deeply immutable).',
+      '`final` reference එකක් immutable වුනත්, ඒක point කරන object එකේ internal state වෙනස් වෙන්න පුළුවන් (`final List` → content වෙනස් කරන්න පුළුවන්). final ≠ deeply immutable.',
+      'final field එකක් constructor එකේදී (හෝ declaration එකේදී) assign කරන්නම ඕන — නැත්නම් compile error.',
     ],
   },
 
   '1.3.4': {
     summary:
-      'transient = serialization එකෙන් skip කරන field. volatile = threads අතර visibility guarantee කරන field.',
+      'දෙකම විශේෂ field modifiers. `transient` = serialization එකෙන් **skip** කරන field (secrets/derived data). `volatile` = threads අතර **visibility** guarantee කරන field. දෙක සම්පූර්ණයෙන් වෙනස් ප්‍රශ්න දෙකකට.',
     sinhala: [
       {
-        heading: 'transient',
-        body: 'Object එකක් serialize (bytes වලට convert) කරනකොට `transient` field එක skip වෙනවා — sensitive/derived data save කරන්න ඕන නැති තැන් වලට. Deserialize කරනකොට transient field එකට default value එක (null/0) එනවා.',
+        heading: 'transient — කතාව: session එක save කරනකොට token එක යන්න ඕන නෑ',
+        body: 'Object එකක් "serialize" කරනවා කියන්නේ ඒක bytes වලට convert කරලා disk/cache/network එකට යවන එක. හිතන්න Session object එකක userId + authToken තියෙනවා. Session එක cache එකට serialize කරද්දී, secret authToken එකත් bytes විදිහට save වෙනවා — security risk! ඒ field එක "serialize කරන්න එපා" කියලා mark කරන්න පුළුවන් — ඒකට `transient`. Deserialize කරද්දී transient field එකට default value එක (null/0) එනවා.',
       },
       {
-        heading: 'volatile',
-        body: '`volatile` field එකක් හැම read/write එකකම main memory එකට යනවා (thread-local cache නෑ). ඒ නිසා එක thread එකක් write කරපු value එක අනිත් threads වලට වහාම visible. Atomicity දෙන්නෙ නෑ — visibility විතරයි.',
+        heading: 'volatile — කතාව: background thread එක නවත්තන්නේ කොහොමද?',
+        body: 'Mortar sync job එකක් background thread එකක while(running){work} කරනවා. Main thread එකෙන් running=false කරලා නවත්තන්න ඕන. ප්‍රශ්නෙ — performance එකට හැම thread එකක්ම variables තමන්ගේ CPU cache එකේ copy එකක තියාගන්නවා. ඒ නිසා main thread එක running=false කරාට, background thread එක තමන්ගේ පරණ cached true එක දැකලා කවදාවත් නවතින්නෙ නෑ! volatile දැම්මම — ඒ field එකේ හැම read/write එකකම main memory එකට යනවා (cache නෑ). ඒ නිසා වෙනස්කම වහාම හැම thread එකකටම visible.',
+      },
+      {
+        heading: 'volatile = visibility, atomicity නෙවෙයි',
+        body: 'වැදගත්: volatile visibility විතරයි දෙන්නේ — "latest value එක හැමෝටම පේනවා". ඒත් atomicity දෙන්නෙ නෑ. count++ වගේ compound operation එකක් (read → add → write steps 3ක්) volatile වුනත් race condition එකක් වෙන්න පුළුවන් (threads දෙකක් එකවර කරොත්). ඒ වගේ වලට AtomicInteger හෝ synchronized (2.4.3) ඕන. volatile හොඳම flags (boolean running) වගේ single read/write වලට.',
       },
     ],
     analogy:
-      'transient = form එකක "do not save" field එකක්. volatile = whiteboard එකක් වගේ — කවුරු ලිව්වත් හැමෝටම වහාම පේනවා (private notebook නෙවෙයි).',
+      '`transient` = form එකක "මේක save කරන්න එපා" කියලා mark කරපු field එකක් (password confirm වගේ). `volatile` = office එකේ shared whiteboard එකක් වගේ — කවුරු ලිව්වත් හැමෝටම වහාම පේනවා. volatile නැති එක = හැමෝම තමන්ගේ private notebook එකේ පරණ copy එකක් බලනවා (stale).',
     code: [
       {
-        filename: 'Session.java',
+        filename: 'Transient.java',
         language: 'java',
         code: `class Session implements java.io.Serializable {
-    private String userId;
-    private transient String authToken; // NOT serialized (secret)
+    private String userId;                    // serialize වෙනවා
+    private transient String authToken;       // serialize වෙන්නෙ නෑ (secret)
+    private transient int cachedScore;        // derived data — save කරන්න ඕන නෑ
 }
+// serialize -> deserialize කරාම:
+//   userId      -> ආපහු එනවා
+//   authToken   -> null (transient, save වුනේ නෑ)
+//   cachedScore -> 0`,
+        note: 'Secrets/derived data transient — bytes වලට යන්නෙ නෑ.',
+      },
+      {
+        filename: 'Volatile.java',
+        language: 'java',
+        code: `class SyncJob {
+    // volatile: වෙනස්කම හැම thread එකකටම වහාම visible
+    private volatile boolean running = true;
 
-class SyncFlag {
-    private volatile boolean running = false; // visible across threads
+    void loop() {                   // background thread
+        while (running) {           // main memory එකෙන් නැවුම් value එක read
+            // ... sync work ...
+        }
+        System.out.println("නැවතුණා");
+    }
 
-    void stop() { running = false; }          // seen immediately
-    void loop() { while (running) { /* work */ } }
-}`,
-        note: 'authToken serialize වෙන්නෙ නෑ; running flag threads අතර visible.',
+    void stop() {                   // main thread
+        running = false;            // background thread එකට වහාම පේනවා
+    }
+}
+// volatile නැත්නම්: background thread එක cached true එක දැකලා නවතින්නෙ නෑ!`,
+        note: 'volatile නිසා stop signal එක background thread එකට වහාම visible.',
+      },
+      {
+        filename: 'VolatileNotAtomic.java',
+        language: 'java',
+        code: `class Counter {
+    private volatile int count = 0;
+    void increment() {
+        count++;   // race condition! (read + add + write — atomic නෙවෙයි)
+    }
+}
+// FIX: compound updates වලට AtomicInteger හෝ synchronized
+// private final AtomicInteger count = new AtomicInteger();
+// count.incrementAndGet();   // atomic`,
+        note: 'volatile = visibility විතරයි; count++ වගේ වලට Atomic/synchronized ඕන.',
       },
     ],
     mortar:
-      'Mortar session objects serialize කරනකොট auth tokens `transient` — cache/disk එකට secrets යන්නෙ නෑ. Long-running sync jobs නවත්තන්න `volatile boolean running` flag එකක් — background thread එකට stop signal එක වහාම පේනවා.',
+      'Mortar session objects serialize කරලා Redis/cache එකට යවද්දී, auth tokens `transient` — secrets cache/disk එකට කවදාවත් යන්නෙ නෑ (security, PROJECT_IDEA 10.5). Long-running sync/enrichment jobs graceful shutdown එකකදී නවත්තන්න `volatile boolean running` flag — main thread එකෙන් stop කරාම background threads වලට වහාම පේනවා. Progress counters වගේ compound updates වලට `AtomicLong` (volatile මදි).',
     keyPoints: [
-      'transient = serialization එකෙන් exclude (secrets/derived data).',
-      'volatile = cross-thread visibility (atomicity නෙවෙයි).',
-      'Compound actions (count++) වලට volatile මදි — Atomic/synchronized ඕන.',
+      '`transient` = serialization එකෙන් exclude (secrets, derived/cached data).',
+      '`volatile` = cross-thread visibility (latest value හැමෝටම පේනවා).',
+      '`volatile` atomicity දෙන්නෙ නෑ — `count++` වගේ compound ops වලට Atomic/synchronized.',
+      'දෙක වෙනස් ප්‍රශ්න දෙකකට — transient = serialization; volatile = concurrency.',
+    ],
+    pitfalls: [
+      '`volatile` දාලා `count++` thread-safe වෙනවා කියලා හිතන එක වැරදියි — visibility ලැබෙනවා, ඒත් atomicity නෑ.',
+      '`transient` field එකක් deserialize කරාම default (null/0) — ඒක නැවත compute/set කරන්න අමතක කරන්න එපා.',
     ],
   },
 
   '1.4.1': {
     summary:
-      'Primitives (int, double, boolean...) = raw values on stack; Wrappers (Integer, Double...) = objects on heap.',
+      'Primitives (int, double, boolean...) = raw values, fast, stack එකේ, null වෙන්න බෑ. Wrappers (Integer, Double...) = ඒවගේ object versions — heap එකේ, null වෙන්න පුළුවන්, collections/generics වල දාන්න පුළුවන්.',
     sinhala: [
       {
-        heading: 'වෙනස',
-        body: 'Primitives 8ක් තියෙනවා (byte, short, int, long, float, double, char, boolean) — ඒවා fast, memory-light, null වෙන්න බෑ. Wrapper classes ඒවගේ object versions — null වෙන්න පුළුවන්, collections (`List<Integer>`) වල දාන්න පුළුවන්, utility methods තියෙනවා (`Integer.parseInt`). Nullability ඕන තැන් වලට wrappers.',
+        heading: 'කතාව: churnScore එක "තවම නොදන්නවා" කියන්නේ කොහොමද?',
+        body: 'Mortar customer කෙනෙක්ගේ churnScore එක ML model එකෙන් calculate වෙනවා. ඒත් අලුත් customer කෙනෙක්ට තවම score එකක් නෑ — "තවම නොදන්නවා" කියන එක represent කරන්න ඕන. int එකකට null වෙන්න බෑ (0 කියන්නෙ "score 0", "නොදන්නවා" නෙවෙයි!). ඒ වගේ තැන් වලට Integer (wrapper) — ඒකට null දාන්න පුළුවන්. මෙන්න මේකයි primitives සහ wrappers අතර ප්‍රධාන practical වෙනස.',
+      },
+      {
+        heading: 'Primitives 8 සහ ඒවගේ wrappers',
+        body: 'Java වල primitive types 8ක් තියෙනවා, හැම එකකටම matching wrapper class එකක්:',
+        points: [
+          'byte→Byte, short→Short, int→Integer, long→Long (integers).',
+          'float→Float, double→Double (decimals).',
+          'char→Character, boolean→Boolean.',
+          'Primitives raw values (stack/fields එකේ direct); wrappers = ඒ value එක wrap කරන objects (heap එකේ).',
+        ],
+      },
+      {
+        heading: 'කවදා මොකක්ද?',
+        body: 'Primitives: fast, memory-light, GC pressure නෑ — hot loops, counters, calculations වලට. Wrappers: null වෙන්න පුළුවන් ("unknown"), collections (`List<Integer>` — primitives දාන්න බෑ) සහ generics වල අවශ්‍යයි, utility methods තියෙනවා (`Integer.parseInt`, `Integer.MAX_VALUE`). රීතිය: nullability/collections ඕන → wrapper; performance ඕන → primitive.',
       },
     ],
     analogy:
-      'Primitive = pocket එකේ තියෙන cash (ඉක්මන්, සරල). Wrapper = bank account එකක් (null වෙන්න පුළුවන්, features වැඩියි, ටිකක් overhead).',
+      'Primitive = pocket එකේ තියෙන cash (ඉක්මන්, සරල, කෙලින්ම use කරන්න පුළුවන්). Wrapper = bank account එකක් (null "no account" වෙන්න පුළුවන්, features වැඩියි, ඒත් ටිකක් overhead). ඔක්කොම cash එකේ තියාගන්නෙ නෑ, ඔක්කොම bank එකේ තියාගන්නෙත් නෑ — අවශ්‍යතාවට අනුව.',
     code: [
       {
-        filename: 'Primitives.java',
+        filename: 'PrimitiveVsWrapper.java',
         language: 'java',
-        code: `int spendCount = 5;              // primitive: fast, cannot be null
-Integer churnScore = null;      // wrapper: can represent "unknown"
+        code: `int spendCount = 5;              // primitive: fast, null වෙන්න බෑ
+Integer churnScore = null;      // wrapper: "තවම calculate කරලා නෑ" = null
 
-// wrappers work in collections & generics
-List<Integer> orderCounts = new ArrayList<>();
+// primitives collections වල දාන්න බෑ -> wrappers ඕන
+List<Integer> orderCounts = new ArrayList<>();   // List<int> කියලා බෑ!
 orderCounts.add(3);
 
-// utility methods live on wrappers
-int parsed = Integer.parseInt("42");`,
-        note: 'churnScore = null වලින් "තවම calculate කරලා නෑ" කියන එක represent කරනවා.',
+// utility methods wrappers මත තියෙනවා
+int parsed = Integer.parseInt("42");
+int max    = Integer.MAX_VALUE;`,
+        note: 'churnScore=null වලින් "unknown" represent කරනවා; int එකකට බෑ.',
+      },
+      {
+        filename: 'NullMatters.java',
+        language: 'java',
+        code: `class Customer {
+    int orderCount;         // primitive -> default 0 (හැමවිටම value එකක්)
+    Integer churnScore;     // wrapper  -> default null (unknown වෙන්න පුළුවන්)
+}
+
+Customer c = new Customer();
+System.out.println(c.orderCount);   // 0
+System.out.println(c.churnScore);   // null  ("තවම score එකක් නෑ")
+
+// "score 0" සහ "score නෑ" වෙනස represent කරන්න wrapper අත්‍යවශ්‍යයි`,
+        note: 'primitive default = 0/false; wrapper default = null.',
       },
     ],
     mortar:
-      'Mortar customer analytics වල churnScore, predictedAge වගේ values තවම නොදන්න වෙන්න පුළුවන — එතන `Integer`/`Double` (nullable wrappers) පාවිච්චි කරනවා, `null` = "unknown". Internal counters වගේ hot-path values `int` (primitives) — fast + no GC pressure.',
+      'Mortar customer analytics වල churnScore, predictedAge, gender-probability වගේ values තවම නොදන්න වෙන්න පුළුවන — එතන Integer/Double (nullable wrappers), null = "unknown/not computed yet". ඒත් identity-resolution hot loops, internal counters වගේ millions-of-iterations තැන් වල int/long (primitives) — fast + GC pressure නෑ. හරි එක තෝරගැනීම correctness + performance දෙකටම වැදගත්.',
     keyPoints: [
-      'Primitives: fast, stack, non-null, 8 types.',
-      'Wrappers: objects, nullable, collections/generics-friendly.',
-      'Nullability/collections ඕන → wrapper; performance ඕන → primitive.',
+      'Primitives: fast, non-null, 8 types (int, double, boolean...).',
+      'Wrappers: objects, nullable, collections/generics-friendly, utility methods.',
+      'Nullability/collections ඕන → wrapper; performance/hot loops → primitive.',
+      'primitive default = 0/false; wrapper default = null.',
+    ],
+    pitfalls: [
+      'Wrapper එකක් null වෙලා තියෙද්දී primitive එකකට assign කරොත් (unboxing) NullPointerException — 1.4.2 බලන්න.',
+      'Millions of wrapper objects (Integer) memory + GC pressure වැඩියි — bulk numeric data වලට primitive arrays හොඳයි.',
     ],
   },
 
   '1.4.2': {
     summary:
-      'Autoboxing = primitive → wrapper automatic conversion; Unboxing = wrapper → primitive. Compiler එකෙන් වෙනවා.',
+      'Autoboxing = primitive → wrapper automatic conversion (`Integer i = 5`). Unboxing = wrapper → primitive (`int x = i`). Compiler එකෙන් background එකේ auto වෙනවා — convenient, ඒත් hidden costs + NPE risk.',
     sinhala: [
       {
-        heading: 'Automatic conversion',
-        body: 'Compiler එක අවශ්‍ය තැන් වල primitive එකක් wrapper එකක් කරනවා (autoboxing: `Integer i = 5;`) සහ අනිත් පැත්තට (unboxing: `int x = i;`). Convenient වුනත්, hidden object creation (performance) සහ `null` unboxing (NPE) risks තියෙනවා.',
+        heading: 'කතාව: int එකයි Integer එකයි මිශ්‍ර වෙනකොට',
+        body: 'ඔයා `Map<String, Integer> counts` එකක් use කරනවා (Map වලට wrapper ඕන). ඒත් ඔයා ලියන්නේ `counts.put("orders", 5)` — 5 කියන්නේ int (primitive). Map එකට ඕන Integer (wrapper). කොහොමද මේක වැඩ කරන්නේ? Compiler එක background එකේ 5 (int) එක automatic Integer.valueOf(5) කරනවා — මේකට autoboxing කියනවා. ආපහු පැත්තට (Integer → int) unboxing. ඔයාට නොදැනීම වෙන convenient feature එකක්, ඒත් hidden costs තියෙනවා.',
+      },
+      {
+        heading: 'දෙපැත්තම',
+        body: 'Compiler එක automatic කරන conversions දෙක:',
+        points: [
+          'Autoboxing: primitive → wrapper. `Integer i = 5;` = `Integer i = Integer.valueOf(5);`.',
+          'Unboxing: wrapper → primitive. `int x = i;` = `int x = i.intValue();`.',
+          'Collections, generics, mixed arithmetic වල නිතරම නොදැනීම වෙනවා.',
+          'හැම autobox එකකම (potentially) අලුත් object එකක් — hot loops වල performance එකට බලපානවා.',
+        ],
+      },
+      {
+        heading: 'අනතුරු 2ක්',
+        body: 'Autoboxing convenient වුනාට අනතුරු 2ක්: (1) null unboxing = NullPointerException — null wrapper එකක් primitive එකකට convert කරන්න බෑ. (2) Performance — tight loop එකක හැම iteration එකකම boxing වුනොත් objects ගොඩක් හැදිලා GC pressure. Millions of records process කරන Mortar වැනි තැන් වල මේක සැලකිය යුතුයි.',
       },
     ],
     analogy:
-      'Cash එකක් automatically bank account එකකට දාන එකයි, ආපහු withdraw කරන එකයි වගේ — background එකේ auto වෙනවා, ඒත් fees (overhead) තියෙනවා.',
+      'Cash (primitive) automatically bank account (wrapper) එකකට deposit කරන එකයි, ආපහු withdraw කරන එකයි වගේ — background එකේ auto වෙනවා, ඒත් හැම transaction එකකටම පොඩි fee (overhead) එකක්. Account එක හිස් (null) නම් withdraw කරන්න බෑ (NPE).',
     code: [
       {
         filename: 'Boxing.java',
         language: 'java',
-        code: `Integer boxed = 10;       // autoboxing: int -> Integer
-int unboxed = boxed;      // unboxing: Integer -> int
+        code: `Integer boxed = 10;      // autoboxing:  int -> Integer (auto)
+int unboxed = boxed;     // unboxing:    Integer -> int (auto)
 
+// Map වලට wrapper ඕන — 5, 1 (int) auto-box වෙනවා
 Map<String, Integer> counts = new HashMap<>();
-counts.put("orders", counts.getOrDefault("orders", 0) + 1); // auto box/unbox
+counts.put("orders", counts.getOrDefault("orders", 0) + 1);
+// getOrDefault -> Integer, +1 -> unbox+add+box (background එකේ boxing 3ක්!)`,
+        note: 'නොදැනීම boxing/unboxing වෙනවා — convenient, ඒත් hidden.',
+      },
+      {
+        filename: 'NullUnboxNpe.java',
+        language: 'java',
+        code: `Integer score = null;        // wrapper — null වෙන්න පුළුවන්
 
-Integer score = null;
-// int bad = score;       //  NPE! unboxing null`,
-        note: 'null wrapper එකක් unbox කරනකොට NullPointerException.',
+// int bad = score;          //  NullPointerException!
+//                              null එකක් unbox කරන්න බෑ
+
+// safe:
+int safe = (score != null) ? score : 0;   // null check කරලා`,
+        note: 'null wrapper එකක් unbox කරනකොට NPE — හැමවිටම null check.',
+      },
+      {
+        filename: 'PerfInLoop.java',
+        language: 'java',
+        code: `// BAD: Long (wrapper) -> හැම += එකකම unbox + add + box (millions of objects)
+Long total = 0L;
+for (long v : values) total += v;    // slow, GC pressure
+
+// GOOD: primitive long -> boxing නෑ
+long fast = 0L;
+for (long v : values) fast += v;     // fast`,
+        note: 'Hot loops වල primitives තියාගන්න — unnecessary boxing නවත්තන්න.',
       },
     ],
     mortar:
-      'Mortar aggregation code එකේ `Map<String,Integer>` counters වගේ තැන් වල autoboxing නිතරම වෙනවා. Millions of records process කරනකොට unnecessary boxing performance එකට බලපානවා — hot loops වල primitives තියාගන්නවා.',
+      'Mortar aggregation code එකේ `Map<String,Integer>` counters, RFM calculations වගේ තැන් වල autoboxing නිතරම වෙනවා. Millions of records process කරන hot paths වල unnecessary boxing objects හැදිලා GC pressure + slowdown. ඒ නිසා performance-critical loops වල primitives (int/long/double) තියාගන්නවා; nullable/collection තැන් වල විතරක් wrappers.',
     keyPoints: [
       'Autobox: primitive→wrapper; Unbox: wrapper→primitive (compiler auto).',
-      'null wrapper unbox = NPE.',
-      'Tight loops වල boxing avoid කරන්න (performance).',
+      'null wrapper unbox = NullPointerException — null check කරන්න.',
+      'Tight/hot loops වල boxing avoid කරන්න (GC pressure + speed).',
     ],
     pitfalls: [
-      '`Integer a = 1000, b = 1000; a == b` → false (== compares references; -128..127 cached only). `.equals()` use කරන්න.',
+      '`Integer a = 1000, b = 1000; a == b` → **false**! (`==` references compare කරනවා; Java -128..127 විතරයි cache කරන්නේ). Content compare කරන්න `.equals()`.',
+      'Ternary/mixed expressions වල unexpected unboxing → NPE (`boolean flag = map.get(key);` map එකේ key නැත්නම්).',
     ],
   },
 
   '1.4.3': {
     summary:
-      'String = immutable; StringBuilder = mutable, fast, not thread-safe; StringBuffer = mutable, thread-safe (slower).',
+      'String = immutable (modify කරන්න බෑ). StringBuilder = mutable buffer, fast, single-thread. StringBuffer = StringBuilder ගේ thread-safe version (synchronized, ටිකක් slow). Text ගොඩක් build කරනකොට හරි එක තෝරගැනීම critical.',
     sinhala: [
       {
-        heading: 'තුනේ තේරුම',
-        body: '`String` immutable — modify කරනකොට හැම වෙලාවෙම අලුත් object එකක් හැදෙනවා. ඒ නිසා loop එකක concat කරනකොට කුණු ගොඩක් objects. `StringBuilder` mutable buffer එකක් — append fast, single-thread වලට හොඳම. `StringBuffer` එයාගෙම thread-safe version එක (methods synchronized, ටිකක් slow).',
+        heading: 'කතාව: emails දහස් ගණන් CSV එකකට join කරනකොට',
+        body: 'Mortar audience export එකකදී emails දහස් ගණන් comma-separated CSV එකකට join කරන්න ඕන. ඔයා ලියනවා `csv += email + ","` කියලා loop එකක. වැඩ කරනවා... ඒත් 100,000 emails එද්දී අතිශය slow! ඇයි? String **immutable** — වෙනස් කරන්න බෑ. `csv += ...` කරන හැම වතාවෙම **අලුත් String object එකක්** හැදෙනවා (පරණ එක + අලුත් text). 100,000 iterations = 100,000 temp objects = O(n²) disaster. විසඳුම StringBuilder.',
+      },
+      {
+        heading: 'තුනේ වෙනස',
+        body: 'Text handle කරන class තුනක්:',
+        points: [
+          '`String` — immutable. Modify කරන හැම වෙලාවෙම අලුත් object එකක් හැදෙනවා. Safe + shareable, ඒත් heavy modification වලට නරකයි.',
+          '`StringBuilder` — mutable buffer. append/insert/delete same object එකේ. Fast. Single-thread වලට හොඳම (thread-safe නෑ).',
+          '`StringBuffer` — StringBuilder ගේම thread-safe version. Methods `synchronized` — multiple threads share කරනකොට safe, ඒත් synchronization overhead නිසා ටිකක් slow.',
+        ],
+      },
+      {
+        heading: 'තෝරගන්නේ කොහොමද',
+        body: 'Simple, කලාතුරකින් වෙනස් වෙන text → String. Loop එකක/ගොඩක් append කරනවා, single-thread → StringBuilder (default choice for building). Multiple threads එකම buffer එකට write කරනවා (කලාතුරකින්) → StringBuffer. Modern code එකේ බොහෝවිට StringBuilder ම ඇති.',
       },
     ],
     analogy:
-      'String = pen එකෙන් ලියලා වැරදුනොත් අලුත් කොළයක් ගන්නවා. StringBuilder = pencil එකක් — එකම කොළේ මකලා ලියනවා (efficient).',
+      'String = pen එකෙන් ලියලා වැරදුනොත් අලුත් කොළයක් ගන්නවා (හැම වෙනස්කමකටම අලුත් කොළයක් — කොළ නාස්තියි). StringBuilder = pencil එකක් + rubber — එකම කොළේ මකලා ලියනවා (efficient). StringBuffer = ඒ pencil එකම, ඒත් එකවර එක්කෙනෙක් විතරයි ලියන්න දෙන "locked" version එක.',
     code: [
       {
-        filename: 'Strings.java',
+        filename: 'StringImmutable.java',
         language: 'java',
-        code: `// BAD: creates a new String every loop iteration
-String csv = "";
-for (String email : emails) csv += email + ","; //  O(n^2)
+        code: `String s = "shopify";
+s.toUpperCase();               // අලුත් String එකක් return කරනවා — s වෙනස් වෙන්නෙ නෑ!
+System.out.println(s);         // "shopify" (තාම lowercase)
 
-// GOOD: one mutable buffer
+s = s.toUpperCase();           // return එක ආපහු assign කරන්නම ඕන
+System.out.println(s);         // "SHOPIFY"`,
+        note: 'String methods object එක වෙනස් කරන්නෙ නෑ — අලුත් එකක් return කරනවා.',
+      },
+      {
+        filename: 'BuildCsv.java',
+        language: 'java',
+        code: `// BAD: හැම iteration එකකම අලුත් String object එකක් -> O(n^2)
+String csv = "";
+for (String email : emails) {
+    csv += email + ",";        // slow! temp objects ගොඩක්
+}
+
+// GOOD: එකම mutable buffer එකක් -> O(n)
 StringBuilder sb = new StringBuilder();
-for (String email : emails) sb.append(email).append(",");
-String result = sb.toString();`,
-        note: 'Large CSV builds වලට StringBuilder — 10-100x faster.',
+for (String email : emails) {
+    sb.append(email).append(",");   // same object, fast
+}
+String result = sb.toString();      // අන්තිමට එක String එකක්`,
+        note: 'Large builds වලට StringBuilder — 10-100x faster.',
+      },
+      {
+        filename: 'WhichOne.java',
+        language: 'java',
+        code: `// single-thread build -> StringBuilder (fast)
+StringBuilder report = new StringBuilder();
+report.append("Total: ").append(1200).append(" customers");
+
+// multiple threads එකම buffer එකට write කරනවා නම් විතරක් -> StringBuffer
+StringBuffer shared = new StringBuffer();   // synchronized methods (safe)`,
+        note: 'Default = StringBuilder; shared-across-threads නම් විතරක් StringBuffer.',
       },
     ],
     mortar:
-      'Mortar CSV export / audience file generation වලදී emails දහස් ගණන් concat වෙනවා. `String +=` වෙනුවට `StringBuilder` පාවිච්චි කරලා millions-of-rows exports streamed + fast කරනවා. Multi-threaded shared buffer එකක් නම් විතරක් StringBuffer.',
+      'Mortar CSV export, audience file generation, Copilot prompt building වලදී emails/rows දහස් ගණන් concat වෙනවා. `String +=` වෙනුවට `StringBuilder` පාවිච්චි කරලා millions-of-rows exports streamed + fast (PROJECT_IDEA 4.3). String immutability නිසා country codes/source names වගේ shared strings safely reuse කරන්නත් පුළුවන් (thread-safe). Multi-threaded shared buffer එකක් ඕන වුනොත් විතරයි StringBuffer.',
     keyPoints: [
-      'String immutable — modify = new object.',
-      'StringBuilder: mutable, fast, single-thread.',
-      'StringBuffer: mutable, synchronized (thread-safe, slower).',
+      'String immutable — modify = අලුත් object (`s.toUpperCase()` return එක assign කරන්න).',
+      'StringBuilder: mutable, fast, single-thread — text building වලට default.',
+      'StringBuffer: mutable + synchronized (thread-safe, slower).',
+      'Loop එකක concat → හැමවිටම StringBuilder (O(n) vs String += O(n²)).',
+    ],
+    pitfalls: [
+      'String immutable නිසා `s.trim()` වගේ call එකක return එක assign නොකළොත් වෙනස්කම නැති වෙනවා (`s = s.trim();`).',
+      'Passwords වගේ sensitive data String එකේ තියාගන්න එපා (immutable නිසා memory එකේ රැඳෙනවා) — `char[]` use කරන්න.',
     ],
   },
 
   '1.4.4': {
     summary:
-      'String Pool = JVM එකේ literals cache කරන special heap area එකක්. Interning එකෙන් duplicate strings share කරනවා.',
+      'String Pool = JVM එකේ string literals cache කරන special memory area එකක් — duplicate strings share කරලා memory ඉතිරි කරනවා. `new String()` pool එක bypass කරනවා; `.intern()` වලින් manually pool කරන්න පුළුවන්.',
     sinhala: [
       {
-        heading: 'Literals vs new',
-        body: 'String literal (`"abc"`) එකක් String Pool එකේ තියෙනවා — එකම literal එක ආයෙ ආවොත් අලුත් object එකක් නෑ, pooled එකම reference එක. ඒත් `new String("abc")` හැමවිටම අලුත් heap object එකක් හදනවා (pool එකේ නෙවෙයි). `.intern()` වලින් string එකක් pool එකට දාන්න පුළුවන්.',
+        heading: 'කතාව: "shopify" මිලියන වතාවක් memory එකේ තියෙන්න ඕනද?',
+        body: 'Mortar එකේ customers මිලියන ගණන් — හැම එකකම source එක "shopify" හෝ "woocommerce", country එක "LK" හෝ "US". මේ එකම strings මිලියන වතාවක් වෙන වෙන objects විදිහට memory එකේ තියෙනවා නම්, memory නාස්තියි. JVM මේකට smart විසඳුමක් — එකම string literal එක එක තැනක තියාගෙන, හැමෝම ඒ එකම එක share කරන එක. ඒකට තමයි String Pool.',
+      },
+      {
+        heading: 'Literal vs new String()',
+        body: 'String එකක් හදන ක්‍රම දෙකට වෙනස් හැසිරීම්:',
+        points: [
+          'String literal (`"shopify"`) — String Pool එකේ. එකම literal එක ආයෙ ආවොත් අලුත් object එකක් නෑ, pooled එකම reference එකයි.',
+          '`new String("shopify")` — හැමවිටම heap එකේ අලුත් object එකක් (pool එක bypass). Memory නාස්තියි, කලාතුරකින් විතරයි ඕන.',
+          '`.intern()` — string එකක් manually pool එකට දානවා (හෝ pooled version එකේ reference එක ගන්නවා).',
+          'ඒ නිසා `==` (reference compare) literals වලට true, ඒත් new String() වලට false.',
+        ],
+      },
+      {
+        heading: 'මතක තියාගන්න: content compare = .equals()',
+        body: 'මේ pool behaviour නිසා `==` predictable නෑ (literal ද, new ද කියන එකට depend). ඒ නිසා **strings content compare කරන්න හැමවිටම `.equals()`** පාවිච්චි කරන්න, කවදාවත් `==` නෙවෙයි. `==` reference (memory address) compare කරනවා; `.equals()` ඇත්ත අකුරු compare කරනවා.',
       },
     ],
     analogy:
-      'Library එකේ එකම පොතේ copies ගොඩක් ගන්නෙ නැතුව, එකම copy එක හැමෝම share කරනවා වගේ — memory ඉතිරි වෙනවා.',
+      'Library එකක එකම පොතේ copies මිලියනයක් ගන්නෙ නැතුව, එකම copy එක හැමෝම share කරනවා වගේ (String Pool). කෙනෙක් "මට මගේම copy එකක්ම ඕන" කිව්වොත් (`new String()`) අලුත් එකක් print කරනවා — ඒත් ඒක නාස්තියි.',
     code: [
       {
         filename: 'Interning.java',
         language: 'java',
-        code: `String a = "shopify";
-String b = "shopify";
-System.out.println(a == b);          // true  (same pooled object)
+        code: `String a = "shopify";              // pool එකේ
+String b = "shopify";              // එකම pooled object එකම (අලුත් එකක් නෑ)
+System.out.println(a == b);        // true  (same reference)
 
-String c = new String("shopify");
-System.out.println(a == c);          // false (new heap object)
-System.out.println(a == c.intern()); // true  (interned -> pool)
-System.out.println(a.equals(c));     // true  (value comparison)`,
+String c = new String("shopify"); // heap එකේ අලුත් object එකක් (pool bypass)
+System.out.println(a == c);        // false (වෙනස් reference)
+System.out.println(a == c.intern()); // true  (intern -> pooled reference)
+System.out.println(a.equals(c));   // true  (content සමානයි — මේක තමයි හරි compare)`,
         note: 'Content compare කරන්න හැමවිටම .equals() — == නෙවෙයි.',
+      },
+      {
+        filename: 'WhyEqualsNotEquals.java',
+        language: 'java',
+        code: `String source1 = getSourceFromDb();     // runtime එකේ හැදෙන String (pool එකේ නෑ)
+String source2 = "shopify";             // literal (pool එකේ)
+
+// if (source1 == source2)  //  වැරදියි! false වෙන්න පුළුවන් (වෙනස් references)
+if (source1.equals(source2)) {          // ✅ හරි — content compare
+    System.out.println("Shopify customer");
+}`,
+        note: 'Runtime strings pool එකේ නෑ — == fail වෙනවා, .equals() හරි.',
       },
     ],
     mortar:
-      'Mortar millions of records වල country codes, source names ("shopify", "LK") වගේ repeated strings ගොඩක්. String pool/interning එකෙන් duplicate strings share කරලා memory footprint එක අඩු කරගන්න පුළුවන් — huge datasets වලට වැදගත්.',
+      'Mortar identity resolution / analytics වලදී millions of records වල country codes, source names, segment labels ("shopify", "LK", "VIP") වගේ repeated strings ගොඩක්. String pool + interning එකෙන් duplicate strings share කරලා memory footprint එක සැලකිය යුතු ලෙස අඩු කරගන්න පුළුවන් — huge datasets heap එකේ තියාගන්නකොට critical. String comparisons හැම තැනම `.equals()` — `==` bugs (source mismatch) වළක්වන්න.',
     keyPoints: [
-      'Literals pooled + shared; `new String()` always new object.',
-      '`==` compares references; `.equals()` compares content.',
-      '`.intern()` = manually pool a string.',
+      'Literals String Pool එකේ + shared; `new String()` හැමවිටම අලුත් heap object.',
+      '`==` = reference compare; `.equals()` = content compare (strings වලට හැමවිටම equals).',
+      '`.intern()` = string එකක් manually pool කරනවා (memory save).',
+    ],
+    pitfalls: [
+      'Strings `==` වලින් compare කරන එක #1 beginner bug — literals වලට වැඩ කරන නිසා "වැඩ කරනවා වගේ" පෙනෙනවා, ඒත් runtime strings වලට fail.',
+      'ඕනවට වඩා `.intern()` කරන එකත් හොඳ නෑ (pool එක ලොකු වෙනවා) — repeated strings ගොඩක් තියෙන තැන් වලට විතරයි.',
     ],
   },
 
   '1.4.5': {
     summary:
-      'Java is always pass-by-value. Objects වලට pass වෙන්නේ reference එකේ copy එකක් — ඒ නිසා confusing.',
+      'Java **හැමවිටම pass-by-value**. Primitive නම් value එකේම copy එකක්; object නම් **reference එකේ copy** එකක් pass වෙනවා. ඒ නිසා object එකේ state වෙනස් කරන්න පුළුවන්, ඒත් reference එක reassign කලාට caller ට බලපාන්නෙ නෑ.',
     sinhala: [
       {
-        heading: 'Value copy, reference copy',
-        body: 'Java හැමවිටම argument එකේ value එකක copy එකක් pass කරනවා. Primitive නම් value එකම copy වෙනවා — method එකේ වෙනස්කම් caller ට බලපාන්නෙ නෑ. Object නම් reference එකේ (address එකේ) copy එකක් pass වෙනවා — ඒ නිසා object එකේ internal state වෙනස් කරන්න පුළුවන් (දෙන්නම එකම object එකට point කරන නිසා), ඒත් reference එක reassign කලොත් caller ට බලපාන්නෙ නෑ.',
+        heading: 'කතාව: "ඇයි මගේ update එක නැති වුනේ?"',
+        body: 'Mortar enrichment pipeline එකේ method එකකට Customer object එකක් pass කරලා, ඇතුලේ `customer.setCountry("LK")` කරනවා — ආපහු බලද්දී update එක තියෙනවා. ඒත් වෙන method එකක ඇතුලේ `customer = new Customer(...)` කරලා ආපහු බලද්දී — original එක වෙනස් වෙලා නෑ! ඇයි මේ වෙනස? මේක තේරුම්ගන්න නම් Java "pass-by-value" කියන එක හරියට තේරුම්ගන්නම ඕන — නැත්නම් bugs.',
+      },
+      {
+        heading: 'Java = always pass-by-value',
+        body: 'Java හැමවිටම argument එකේ **value එකක copy එකක්** method එකට pass කරනවා. දැන් "value" එක මොකක්ද කියන එක type එකට අනුව වෙනස්:',
+        points: [
+          'Primitive (int, double...): value එකම copy වෙනවා. Method එකේ වෙනස්කම් original එකට බලපාන්නෙම නෑ.',
+          'Object: reference එකේ (address එකේ) copy එකක් pass වෙනවා — object එකේම copy එකක් නෙවෙයි.',
+          'ඒ නිසා copy-reference එකයි original-reference එකයි දෙකම **එකම object එකට** point කරනවා.',
+          'object එකේ internal state වෙනස් කරොත් (setCountry) → දෙන්නම දකිනවා. ඒත් copy-reference එක reassign කරොත් (= new) → original reference එකට බලපෑමක් නෑ.',
+        ],
+      },
+      {
+        heading: 'මේකෙන් තේරෙන්නේ',
+        body: 'Object එකක් pass කරාම — ඇතුලේ ඒ object එකේ state වෙනස් කරන්න පුළුවන් (mutation), caller ට පේනවා. ඒත් parameter එකට අලුත් object එකක් assign කරලා original එක වෙනස් කරන්න බෑ. ඒ නිසා "Java pass-by-reference" කියන එක **වැරදියි** — හරි term එක "pass reference-value by value".',
       },
     ],
     analogy:
-      'Object එකේ address එකේ photocopy එකක් දෙනවා වගේ. Photocopy එකෙන් ගෙදර ඇතුලෙ (state) වෙනස් කරන්න පුළුවන්, ඒත් photocopy එකේ address එක වෙනස් කලාට original address එකට බලපෑමක් නෑ.',
+      'Object එකේ address එකේ **photocopy** එකක් දෙනවා වගේ. Photocopy එකේ තියෙන address එකට ගිහින් ගෙදර ඇතුලෙ (state) වෙනස් කරන්න පුළුවන් — original owner ටත් පේනවා (එකම ගෙදර). ඒත් photocopy එකේ address එක මකලා අලුත් එකක් ලිව්වත් (reassign), original owner ගේ address එකට බලපෑමක් නෑ.',
     code: [
       {
-        filename: 'PassByValue.java',
+        filename: 'Mutation.java',
         language: 'java',
-        code: `static void mutate(Customer c) { c.setEmail("new@x.com"); } // affects caller
-static void reassign(Customer c) { c = new Customer("z@x.com"); } // does NOT
+        code: `// object එකේ STATE වෙනස් කරනවා -> caller ට බලපානවා
+static void enrich(Customer c) {
+    c.setCountry("LK");        // reference copy එකත් එකම object එකට point කරන නිසා
+}
 
 Customer cust = new Customer("a@x.com");
-mutate(cust);
-System.out.println(cust.getEmail()); // new@x.com (state changed)
+enrich(cust);
+System.out.println(cust.getCountry());  // "LK" -> වෙනස්කම පේනවා!`,
+        note: 'object state mutation → original object එකට බලපානවා.',
+      },
+      {
+        filename: 'Reassignment.java',
+        language: 'java',
+        code: `// parameter එකට අලුත් object එකක් assign කරනවා -> caller ට බලපාන්නෙ නෑ
+static void replace(Customer c) {
+    c = new Customer("z@x.com");   // local reference copy එක විතරයි වෙනස් වෙන්නේ
+    c.setCountry("US");            // මේ අලුත් object එකට විතරයි
+}
 
-reassign(cust);
-System.out.println(cust.getEmail()); // new@x.com (reference copy reassigned)`,
-        note: 'State change බලපානවා; reference reassign බලපාන්නෙ නෑ.',
+Customer cust = new Customer("a@x.com");
+replace(cust);
+System.out.println(cust.getEmail());   // "a@x.com" -> වෙනස් වුනේ නෑ!`,
+        note: 'reference reassign local විතරයි — original reference safe.',
+      },
+      {
+        filename: 'Primitive.java',
+        language: 'java',
+        code: `// primitive: value එකේම copy එකක් -> මුකුත් බලපාන්නෙ නෑ
+static void tryChange(int x) {
+    x = 999;               // local copy එක විතරයි
+}
+int count = 5;
+tryChange(count);
+System.out.println(count);  // 5 (වෙනස් වුනේ නෑ)`,
+        note: 'primitives value-copy — method එකේ වෙනස්කම් original එකට බලපාන්නෙ නෑ.',
       },
     ],
     mortar:
-      'Mortar enrichment pipeline එකේ `Customer` object එකක් stages ගණනාවක් හරහා යනවා (name inference → geocode → validate). හැම stage එකක්ම එකම object එකේ state වෙනස් කරනවා (reference copy නිසා). මේ මූලික දේ තේරුම් නොගත්තොත් "ඇයි update එක නැති වුනේ?" වගේ bugs එනවා.',
+      'Mortar enrichment pipeline එකේ එකම `Customer` object එක stages ගණනාවක් හරහා යනවා (name inference → gender → geocode → email-validate). හැම stage එකකම එකම object එකේ state වෙනස් කරනවා (reference-value pass-by-value නිසා දෙන්නම එකම object එකට point කරනවා) — ඒ නිසා changes accumulate වෙනවා. මේ මූලික සිද්ධාන්තය තේරුම් නොගත්තොත් "ඇයි update එක නැති වුනේ?" (reassign කරාට) හෝ "ඇයි මේ object එක අනපේක්ෂිතව වෙනස් වුනේ?" (shared mutation) වගේ bugs එනවා.',
     keyPoints: [
-      'Java = always pass-by-value.',
-      'Objects: reference එකේ copy → state mutate කරන්න පුළුවන්.',
-      'Parameter reassign කලාට caller ට බලපාන්නෙ නෑ.',
+      'Java = **always** pass-by-value.',
+      'Object → reference එකේ copy pass වෙනවා → object state mutate කරන්න පුළුවන් (caller ට පේනවා).',
+      'Parameter reassign (`= new`) කලාට caller ගේ reference එකට බලපාන්නෙ නෑ.',
+      'Primitive → value copy → method වෙනස්කම් original එකට කවදාවත් බලපාන්නෙ නෑ.',
     ],
     pitfalls: [
-      '"Java objects pass-by-reference" කියන එක වැරදියි — reference-value pass-by-value කියන එක හරි.',
+      '"Java objects pass-by-reference" කියන එක වැරදියි — "reference-value pass-by-value" කියන එක හරි (interview trap).',
+      'Method එකකට pass කරන mutable object එකක් ඇතුලේ වෙනස් වුනොත් caller ට surprise එකක් — shared mutable state පරෙස්සමින් (immutability — 1.3.3 — උදව් වෙනවා).',
     ],
   },
 };
