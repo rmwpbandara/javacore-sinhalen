@@ -349,89 +349,205 @@ c.sync(); // -> "Two-way sync via Klaviyo"`,
 
   '1.2.2': {
     summary:
-      'Interface = pure contract එකක්. Java 8 වලින් default/static methods, Java 9 වලින් private methods add වුණා.',
+      'Interface = contract එකක්. Java 8-ට කලින් abstract methods විතරයි; Java 8 වලින් `default` + `static`, Java 9 වලින් `private` methods add වුණා.',
     sinhala: [
       {
-        heading: 'Contract + default methods',
-        body: 'Interface එකක් methods වල signatures define කරනවා (කවුරු implement කරන්නද කියලා). Class එකකට interfaces කිහිපයක් `implements` කරන්න පුළුවන් (multiple inheritance of type). Java 8 වලින් `default` methods — interface එකේම body එකක් දෙන්න පුළුවන්, backward-compatible විදිහට අලුත් methods add කරන්න. `static` methods interface එකේ utility විදිහට තියෙන්න පුළුවන්.',
+        heading: 'Interface එකක method වර්ග 4',
+        body: 'Interface එකක් class එකක් අනුගමනය කරන්නම ඕන "contract" එකක්. Java 8-ට කලින් තිබුණේ abstract methods විතරයි (body නැති). දැන් වර්ග 4ක් තියෙනවා: (1) `abstract` — body නෑ, implementing class එක ලියන්නම ඕන. (2) `default` — body තියෙනවා, හැම object එකකටම නොමිලේ ලැබෙනවා (Java 8). (3) `static` — body තියෙනවා, interface name එකෙන් call කරනවා (Java 8). (4) `private` — default/static methods වලට ඇතුලෙන් reuse කරන helper (Java 9). Class එකකට interfaces කිහිපයක් `implements` කරන්න පුළුවන් (multiple inheritance of type).',
+      },
+      {
+        heading: 'default method — instances වලට එන පොදු behaviour',
+        body: '`default` method එකකට interface එකේම body එකක් තියෙනවා. හැම implementing class එකකටම ඒක automatically ලැබෙනවා — override නොකළොත් default version එක run වෙනවා. ඇයි ආවේ: පරණ interface එකකට අලුත් method එකක් add කරනකොට ඒක implement කරපු classes ඔක්කොම කැඩෙනවා. `default` body එකක් දීලා, පරණ code කැඩෙන්නෙ නැතුව interface එක evolve කරන්න පුළුවන් (backward compatibility). Instance method එකක් නිසා `this` access කරන්න, class එකේ අනිත් methods call කරන්න පුළුවන්; ඕන නම් override කරන්නත් පුළුවන්.',
+      },
+      {
+        heading: 'static method — interface එකට අයිති utility/factory',
+        body: '`static` method එකක් object එකක් නැතුව interface name එකෙන් call කරනවා (`Interface.method()`) — ඒක object එකකට නෙවෙයි, interface එකට අයිති. Related helper/factory methods වෙනම `XxxUtils` class එකක් නැතුව interface එකේම තියාගන්න පුළුවන් (cohesion). `this` නෑ, override කරන්න බෑ, implementing class එකට inherit වෙන්නෙත් නෑ — හැමවිටම `Interface.method()`.',
+      },
+      {
+        heading: 'default vs static — මූලික වෙනස',
+        body: '`default`: object එකට අයිති, `obj.method()` විදිහට call, `this` access පුළුවන්, override පුළුවන්, implementing class එකට inherit වෙනවා — shared **behaviour** එකකට. `static`: interface එකට අයිති, `Interface.method()` විදිහට call, `this` නෑ, override බෑ, inherit වෙන්නෙ නෑ — **factory/utility** helper එකකට. මතක තියාගන්න: default = "හැම object එකකටම නොමිලේ එන behaviour", static = "interface එකට අමුණපු toolbox".',
       },
     ],
     analogy:
-      '"Syncable" කියන්නේ බලපත්‍රයක් වගේ — "මම sync කරන්න පුළුවන්" කියලා පොරොන්දුවක්. ඒ පොරොන්දුව දෙන ඕනම දෙයක් (connector, exporter) sync කරන්න පුළුවන් කියලා guarantee එකක්.',
+      'Interface එක "බලපත්‍රයක්" වගේ ("මම sync කරන්න පුළුවන්"). `default` method එක = බලපත්‍රය එක්කම එන පොදු පහසුකමක් (හැම දරුවෙක්ටම නොමිලේ). `static` method එක = බලපත්‍රය නිකුත් කරන office එකේ front-desk service එකක් (කෙනෙක් නැතුවම, office එකෙන්ම ගන්නවා).',
     code: [
       {
-        filename: 'Syncable.java',
+        filename: 'DefaultMethod.java',
         language: 'java',
-        code: `public interface Syncable {
-    void sync();                        // abstract contract
+        code: `public interface AudienceSink {
+    void push(List<String> ids);          // abstract: each sink writes this
 
-    default void syncWithRetry() {      // Java 8 default method
-        for (int i = 0; i < 3; i++) {
-            try { sync(); return; }
-            catch (Exception e) { System.out.println("retry " + i); }
+    // default: every sink gets retry behaviour for FREE (instance method)
+    default void pushWithRetry(List<String> ids) {
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try { push(ids); return; }    // 'this' sink's own push()
+            catch (Exception e) { System.out.println("retry " + attempt); }
         }
-    }
-
-    static Syncable noop() {             // Java 8 static method
-        return () -> System.out.println("no-op sync");
+        throw new RuntimeException("push failed after 3 tries");
     }
 }
 
-class MetaAudienceSync implements Syncable {
-    public void sync() { System.out.println("Push audience to Meta"); }
-}`,
-        note: 'syncWithRetry() default නිසා හැම implementer ම නොමිලේ retry logic එක ලැබෙනවා.',
+class MetaSink implements AudienceSink {
+    public void push(List<String> ids) { /* Meta API call */ }
+    // pushWithRetry() ලියන්න ඕන නෑ — default නිසා නොමිලේ ලැබෙනවා
+}
+
+// call on the OBJECT
+new MetaSink().pushWithRetry(ids);`,
+        note: 'default = instance method; obj.method() විදිහට call, override කරන්නත් පුළුවන්.',
+      },
+      {
+        filename: 'StaticMethod.java',
+        language: 'java',
+        code: `public interface AudienceSink {
+    void push(List<String> ids);
+
+    // static factory: build a sink WITHOUT an object
+    static AudienceSink forPlatform(String platform) {
+        return switch (platform) {
+            case "meta"   -> new MetaSink();
+            case "google" -> new GoogleSink();
+            default        -> ids -> System.out.println("no-op"); // lambda impl
+        };
+    }
+
+    // static utility helper
+    static boolean isValidBatch(List<String> ids) {
+        return ids != null && !ids.isEmpty() && ids.size() <= 1_000_000;
+    }
+}
+
+// call on the INTERFACE NAME (no object)
+AudienceSink sink = AudienceSink.forPlatform("meta");
+if (AudienceSink.isValidBatch(ids)) sink.push(ids);`,
+        note: 'static = Interface.method(); object එකක් නෑ, override/inherit බෑ.',
+      },
+      {
+        filename: 'Connector.java',
+        language: 'java',
+        code: `// all four kinds together on one interface
+public interface Connector {
+    List<Customer> fetch();                       // 1. abstract
+
+    default List<Customer> fetchValidOnly() {     // 2. default (uses fetch())
+        return fetch().stream().filter(Connector::hasEmail).toList();
+    }
+
+    static Connector of(String platform) {        // 3. static factory
+        return switch (platform) {
+            case "shopify" -> new ShopifyConnector();
+            case "klaviyo" -> new KlaviyoConnector();
+            default -> throw new IllegalArgumentException(platform);
+        };
+    }
+
+    private static boolean hasEmail(Customer c) { // 4. private (Java 9) helper
+        return c.getEmail() != null && c.getEmail().contains("@");
+    }
+}
+
+Connector c = Connector.of("shopify");   // static factory
+List<Customer> clean = c.fetchValidOnly(); // default (calls class's fetch())`,
+        note: 'abstract = must implement, default = free behaviour, static = factory, private = internal helper.',
       },
     ],
     mortar:
-      'Mortar activation layer එකේ Meta, Google, Klaviyo destinations හැම එකක්ම `Syncable`. `syncWithRetry()` default method එකෙන් හැම destination එකකටම retry logic එක නොමිලේ ලැබෙනවා — code duplicate නැතුව.',
+      'Mortar activation layer එකේ Meta/Google/Klaviyo destinations හැම එකක්ම `AudienceSink`. `pushWithRetry()` **default** method එකෙන් හැම destination එකකටම retry logic නොමිලේ (duplicate නැතුව). `AudienceSink.forPlatform(...)` **static** factory එකෙන් UI/service එකට concrete class දැනගන්න ඕන නෑ (Factory Method — 5.3.1.2 එකට tie වෙනවා). Connectors වලත් `Connector.of(...)` factory + `fetchValidOnly()` default behaviour එකම pattern එක.',
     keyPoints: [
-      'Interface = multiple inheritance of type (class එකකට කිහිපයක්).',
-      'Java 8: `default` + `static` methods; Java 9: `private` helper methods.',
+      'Interface methods 4: `abstract` / `default` / `static` / `private`.',
+      '`default` = object එකට අයිති (instance), `obj.method()`, `this` OK, override OK, inherit වෙනවා → shared behaviour.',
+      '`static` = interface එකට අයිති, `Interface.method()`, `this` නෑ, override/inherit බෑ → factory/utility.',
+      '`default` methods backward-compatible විදිහට interface එකට අලුත් methods add කරන්න.',
       'Fields interface වල implicitly `public static final` (constants).',
+    ],
+    pitfalls: [
+      '`static` method inherit වෙන්නෙ නෑ — `MetaSink.forPlatform(...)` බෑ, `AudienceSink.forPlatform(...)` විතරයි.',
+      'Interfaces දෙකකට එකම `default` method එකක් තිබුණොත් diamond problem — override කරලා `Interface.super.method()` වලින් resolve කරන්නම ඕන (බලන්න 1.2.5).',
+      '`Object` class එකේ methods (`equals`, `hashCode`, `toString`) `default` විදිහට දෙන්න බෑ.',
     ],
   },
 
   '1.2.3': {
     summary:
-      'Abstract class vs Interface: කවදා මොකක්ද use කරන්නේ? — state + shared code නම් abstract class; pure capability contract නම් interface.',
+      'දෙකම "අඩක් හදපු" types — අනිත් classes සම්පූර්ණ කරන. Abstract class = shared state + base identity (එකයි extend කරන්නේ). Interface = capabilities contract (කිහිපයක් mix කරන්න පුළුවන්).',
     sinhala: [
       {
-        heading: 'තෝරගන්නේ කොහොමද',
-        body: 'Abstract class එකට constructors, instance fields (state), සහ any access modifier methods තියෙන්න පුළුවන් — ඒත් class එකකට එකක් විතරයි extend කරන්න පුළුවන්. Interface එකකට state නෑ (constants විතරයි), ඒත් කිහිපයක් implement කරන්න පුළුවන්. "IS-A + shared state" → abstract class. "CAN-DO capability" → interface.',
+        heading: 'දෙකම මොකක්ද? (සරලවම)',
+        body: 'Abstract class එකයි interface එකයි දෙකම "අඩක් සම්පූර්ණ" blueprints — කෙලින්ම `new` කරන්න බෑ, subclass/implementing class එකක් සම්පූර්ණ කරන්නම ඕන. වෙනස තියෙන්නේ **rules** වල. Abstract class එකක් සාමාන්‍ය class එකක් වගේ — fields (state), constructors, සහ body තියෙන normal methods තියෙන්න පුළුවන් — ඒත් `abstract` කියපු නිසා instantiate කරන්න බෑ, සහ subclass එකට එකයි extend කරන්න පුළුවන්. Interface එකක් "capability contract" එකක් — කලින් methods signatures විතරයි, දැන් default/static bodies-ත් — ඒත් instance state (mutable fields) නෑ, class එකකට interfaces කිහිපයක් implement කරන්න පුළුවන්.',
+      },
+      {
+        heading: 'Point-by-point වෙනස',
+        body: 'Inheritance: class එකකට abstract class **එකයි** extend කරන්න පුළුවන්; interfaces **කිහිපයක්** implement කරන්න පුළුවන්. State: abstract class එකට instance fields (`private double spend;` වගේ mutable state) තියෙන්න පුළුවන්; interface එකට constants (`public static final`) විතරයි. Constructors: abstract class එකට තියෙනවා (subclass එකෙන් `super(...)` call වෙනවා); interface එකට නෑ. Methods: abstract class එකට `private`/`protected`/`public` ඕන එකක්; interface members public (private helpers hidden). Relationship: abstract class = "IS-A" (identity — Dog IS-A Animal); interface = "CAN-DO" (capability — Dog CAN Swim).',
+      },
+      {
+        heading: 'කවදා මොකක්ද තෝරන්නේ (decision guide)',
+        body: 'Shared **state** + shared **code** + strong "IS-A" identity තියෙනවා නම් → abstract class (උදා: හැම connector එකකම brandId + පොදු run() flow). හුදෙක් "මේ දේ කරන්න පුළුවන්" කියන capability එකක් නම්, unrelated types වලට apply වෙනවා නම්, class එකකට කිහිපයක් අවශ්‍ය නම් → interface (උදා: Exportable, Schedulable). අවුල නම්: **interface එකෙන් පටන් ගන්න** — modern Java වල interface + default methods බොහෝවිට enough, coupling අඩුයි. දෙකම එකට use කරන්නත් පුළුවන් — base identity abstract class එකෙන්, extra capabilities interfaces වලින්.',
       },
     ],
     analogy:
-      '`AbstractConnector` = "Connector කෙනෙක්" (identity + shared state). `Syncable`, `Exportable` = "පුළුවන් දේවල්" (capabilities). එක connector එකක් Connector වෙන්නත්, Syncable + Exportable දෙකම වෙන්නත් පුළුවන්.',
+      'Abstract class = "මම Connector කෙනෙක්" කියන **පවුලේ නම + උරුමය** (brandId, පොදු පුරුදු) — එක පවුලකට විතරයි අයිති වෙන්න පුළුවන් (single extend). Interface = "පිහිනන්න පුළුවන්", "රිය පදවන්න පුළුවන්" වගේ **බලපත්‍ර** — කෙනෙක්ට කීපයක් තියාගන්න පුළුවන් (multiple implement), පවුල මොකක් වුනත්.',
     code: [
       {
-        filename: 'Comparison.java',
+        filename: 'AbstractVsInterface.java',
         language: 'java',
-        code: `// abstract class: identity + shared state
+        code: `// ABSTRACT CLASS: base identity + shared STATE + shared CODE
 abstract class AbstractConnector {
-    protected String brandId;            // state allowed
-    abstract void sync();
+    protected final String brandId;               // state (fields)
+    protected AbstractConnector(String brandId) { // constructor
+        this.brandId = brandId;
+    }
+    public final void run() {                     // shared concrete code
+        authenticate();
+        sync();                                   // subclass fills this
+    }
+    protected void authenticate() { /* shared */ }
+    protected abstract void sync();               // must implement
 }
 
-// interfaces: capabilities, mix many
-interface Exportable { void export(); }
+// INTERFACES: capabilities — small, mixable, no state
+interface Exportable  { void export(); }
 interface Schedulable { void schedule(); }
 
+// one base identity (extends) + many capabilities (implements)
 class ShopifyConnector extends AbstractConnector
         implements Exportable, Schedulable {
-    void sync()     { }
+    ShopifyConnector(String brandId) { super(brandId); }
+    protected void sync()   { /* Shopify sync */ }
+    public void export()    { /* to CSV */ }
+    public void schedule()  { /* nightly */ }
+}`,
+        note: 'extends = එකයි (identity+state); implements = කීපයක් (capabilities).',
+      },
+      {
+        filename: 'WhyNotBoth.java',
+        language: 'java',
+        code: `// A class can only EXTEND one — this is illegal:
+// class X extends AbstractConnector, AbstractExporter { }  //  COMPILE ERROR
+
+// But it can IMPLEMENT many — perfectly fine:
+class KlaviyoConnector extends AbstractConnector
+        implements Exportable, Schedulable, AutoCloseable {  // 3 capabilities
+    KlaviyoConnector(String b) { super(b); }
+    protected void sync()  { }
     public void export()   { }
     public void schedule() { }
+    public void close()    { }
 }`,
-        note: 'One base identity (extends) + many capabilities (implements).',
+        note: 'Single inheritance (class) vs multiple capabilities (interfaces).',
       },
     ],
     mortar:
-      'Mortar එකේ connector එකක් `AbstractConnector` එකෙන් identity + brandId state එක ගන්නවා, `Exportable`/`Schedulable` interfaces වලින් extra capabilities mix කරගන්නවා. මේ separation එකෙන් flexible, testable design එකක් එනවා.',
+      'Mortar connector එකක් `AbstractConnector` එකෙන් **identity + brandId state + පොදු run() flow** උරුම කරගන්නවා (හැම connector එකක්ම මූලිකවම එකයි). ඊට අමතරව, සමහර connectors export පුළුවන්, සමහර schedule පුළුවන් — ඒ **capabilities** `Exportable`/`Schedulable` interfaces වලින් mix කරගන්නවා. ඒ නිසා "connector කෙනෙක්" කියන identity එකයි, "මොනවා කරන්න පුළුවන්ද" කියන capabilities එකයි වෙන් වෙනවා — flexible, testable design එකක්.',
     keyPoints: [
-      'Abstract class: single inheritance, state + constructors OK.',
-      'Interface: multiple, no instance state, capability-focused.',
-      'Modern Java වල interface + default methods බොහෝවිට enough.',
+      'දෙකම instantiate කරන්න බෑ — අනිත් class සම්පූර්ණ කරන්නම ඕන.',
+      'Abstract class: single `extends`, instance state + constructors OK → "IS-A" identity + shared code.',
+      'Interface: multiple `implements`, state නෑ (constants only) → "CAN-DO" capabilities.',
+      'Rule of thumb: interface එකෙන් පටන් ගන්න; shared state/code ඕන වුනාම abstract class.',
+      'දෙක එකට: base identity abstract class + extra capabilities interfaces.',
+    ],
+    pitfalls: [
+      'Class එකකට abstract classes දෙකක් extend කරන්න බෑ (single inheritance) — capabilities කිහිපයක් ඕන නම් interfaces use කරන්න.',
+      'Interface එකට instance state (mutable fields) දාන්න හදන එක වැරදියි — ඒවා constants (`public static final`) විතරයි.',
     ],
   },
 
