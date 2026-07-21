@@ -9,66 +9,113 @@ import { Concept } from '../../core/models/roadmap.model';
 export const SECTION_01: Record<string, Concept> = {
   '1.1.1': {
     summary:
-      'Class kiyanne blueprint එකක්; Object kiyanne ඒ blueprint එකෙන් හදන real instance එක.',
+      'Class = customer කෙනෙක් කොහොම විදිහට තියෙන්නද කියලා අඳින "blueprint" එක (fields + methods). Object = ඒ blueprint එකෙන්, `new` කරලා heap memory එකේ හදන ඇත්ත, ජීවත් වෙන instance එක. එක class → objects කීයක් හරි.',
     sinhala: [
       {
-        heading: 'Class vs Object',
-        body: 'Class එකක් කියන්නේ දත්ත (fields) සහ හැසිරීම (methods) එකට bundle කරන template එකක්. ඒක තාම memory එකේ නෑ — ඒක plan එකක් විතරයි. `new` keyword එකෙන් object එකක් හදනකොට තමයි ඇත්තටම heap memory එකේ instance එකක් හැදෙන්නේ. එක class එකකින් objects ගොඩක් හදන්න පුළුවන්, හැම එකකටම තමන්ගේම state එකක් තියෙනවා.',
+        heading: 'කතාව: Mortar එකට customer කෙනෙක් "represent" කරන්නේ කොහොමද?',
+        body: 'ඔයා Mortar team එකට join වුණා. පළවෙනි වැඩේ — Shopify එකෙන් එන customer කෙනෙක්ගේ විස්තර (email, spend, orders) code එකේ තියාගන්නේ කොහොමද? ඔයාට variables ගොඩක් හදන්න පුළුවන් (`email1`, `spend1`, `email2`, `spend2`...) — ඒත් customers මිලියන ගණන් එද්දී ඒක අවුලක්. හොඳම විදිහ: "customer කෙනෙක් කියන්නේ මොකක්ද" කියලා **එක තැනක define** කරන එක — ඒකට තමයි `class`. එතකොට හැම customer කෙනෙක්ම ඒ එකම හැඩයෙන්, ඒත් වෙන වෙනම data එක්ක හදන්න පුළුවන්.',
       },
       {
-        heading: 'State සහ Behavior',
-        body: 'Object එකක State එක තියෙන්නේ fields වල (උදා: customer කෙනෙක්ගේ email, totalSpend). Behavior එක තියෙන්නේ methods වල (උදා: `recordPurchase()`). Object කියන්නේ මේ දෙක එකට තියෙන "living" entity එකක්.',
+        heading: 'Class = blueprint (plan එක විතරයි)',
+        body: 'Class එකක් කියන්නේ දත්ත (fields) සහ හැසිරීම (methods) එකට bundle කරන **template** එකක්. වැදගත්ම දේ: class එකක් memory එකේ **නෑ** — ඒක ගෙයක් හදන plan එකක් වගේ, plan එකේ ජීවත් වෙන්න බෑ. Class එකක් define කරන එකෙන් customers හැදෙන්නෙ නෑ — customer කෙනෙක් හදන්නේ මොන හැඩයෙන්ද කියලා විස්තර කරනවා විතරයි.',
+      },
+      {
+        heading: 'Object = `new` කරලා හදන ඇත්ත instance එක',
+        body: '`new Customer(...)` කියලා ලියනකොට තමයි ඇත්තටම **heap memory** එකේ object එකක් හැදෙන්නේ — plan එකෙන් ඇත්ත ගෙයක් හදනවා වගේ. ඒ object එකට තමන්ගේම data (state) තියෙනවා. `Customer alice = new Customer(...)` කියද්දී: `new Customer(...)` heap එකේ object එක හදනවා, `alice` කියන්නේ ඒ object එකට point කරන reference (address) එක.',
+      },
+      {
+        heading: 'State (data) සහ Behavior (actions)',
+        body: 'Object එකකට කොටස් දෙකක්: **State** = fields වල තියෙන data (customer කෙනෙක්ගේ email, totalSpend). **Behavior** = methods (`recordPurchase()` වගේ — data එක්ක වැඩ කරන actions). Object කියන්නේ මේ දෙක එකට bundle වුණ "ජීවත් වෙන" එකක්. එක class එකකින් හදන object 2ක් — `alice` සහ `bob` — වෙන වෙනම state තියාගන්නවා (alice ගේ spend වෙනස් කලාට bob ට බලපාන්නෙ නෑ).',
       },
     ],
     analogy:
-      'Class එක house plan එකක් වගේ. Plan එකෙන් ගෙවල් 100ක් හදන්න පුළුවන් — හැම ගෙයක්ම (object) එකම plan එකෙන්, ඒත් වෙන වෙනම address, colour, owner එක්ක.',
+      'Class එක ගෙයක් හදන **architectural plan** එකක් වගේ. Plan එකෙන් ගෙවල් 100ක් හදන්න පුළුවන් — හැම ගෙයක්ම (object) එකම plan එකෙන්, ඒත් වෙන වෙනම address, paint colour, owner (state). Plan එකේ (class) කවුරුත් පදිංචි වෙන්නෙ නෑ; හදපු ගෙයක (object) තමයි ජීවත් වෙන්නේ.',
     code: [
       {
         filename: 'Customer.java',
         language: 'java',
-        code: `// Class = blueprint for every Mortar customer record
+        code: `// CLASS = හැම Mortar customer කෙනෙක්ම හදන blueprint එක
 public class Customer {
-    // --- state (fields) ---
-    private String email;
-    private double totalSpend;
 
-    // constructor: object එකක් හදනකොට initial state එක set කරයි
+    // ── STATE (fields): object එකකට තියෙන data ──
+    private String email;        // customer ගේ email
+    private double totalSpend;    // මේ දක්වා වියදම් කරපු මුදල
+    private int orderCount;       // orders ගාන
+
+    // CONSTRUCTOR: object එකක් 'new' කරනකොට initial state එක set කරයි
     public Customer(String email) {
-        this.email = email;
-        this.totalSpend = 0.0;
+        this.email = email;       // 'this' = දැන් හදන මේ object එක
+        this.totalSpend = 0.0;    // අලුත් customer -> spend 0
+        this.orderCount = 0;
     }
 
-    // --- behavior (method) ---
+    // ── BEHAVIOR (methods): object එකේ data එක්ක වැඩ කරන actions ──
     public void recordPurchase(double amount) {
-        this.totalSpend += amount;
+        this.totalSpend += amount;  // state එක update කරනවා
+        this.orderCount++;
     }
 
-    public double getTotalSpend() {
-        return totalSpend;
+    public double averageOrderValue() {   // derived value එකක්
+        return orderCount == 0 ? 0 : totalSpend / orderCount;
     }
-}
 
-class Demo {
+    public String getEmail() { return email; }
+    public double getTotalSpend() { return totalSpend; }
+}`,
+        note: 'Class එක = blueprint. තාම memory එකේ customer කෙනෙක් නෑ — plan එක විතරයි.',
+      },
+      {
+        filename: 'CreateObjects.java',
+        language: 'java',
+        code: `public class Demo {
     public static void main(String[] args) {
-        // 'new' = heap එකේ object එකක් හැදෙනවා
+
+        // 'new' කරද්දී heap එකේ ඇත්ත object එකක් හැදෙනවා
         Customer alice = new Customer("alice@shop.com");
+        Customer bob   = new Customer("bob@shop.com");
+
+        // alice ට කරන දේ bob ට බලපාන්නෙ නෑ — වෙන වෙනම state
         alice.recordPurchase(120.0);
-        System.out.println(alice.getTotalSpend()); // 120.0
+        alice.recordPurchase(80.0);
+        bob.recordPurchase(50.0);
+
+        System.out.println(alice.getTotalSpend());     // 200.0
+        System.out.println(bob.getTotalSpend());       // 50.0
+        System.out.println(alice.averageOrderValue()); // 100.0
+
+        // objects දෙක වෙනස් — එකම class එකෙන් වුණත් independent
+        System.out.println(alice == bob);              // false
     }
 }`,
-        note: 'alice කියන්නේ Customer class එකේ එක object එකක් (instance එකක්).',
+        note: 'එක class එකකින් හදන objects කීයක් හරි — හැම එකකටම තමන්ගේම state.',
+      },
+      {
+        filename: 'ReferenceVsObject.java',
+        language: 'java',
+        code: `// reference එකයි object එකයි වෙනස් දෙකක්
+Customer a = new Customer("x@x.com"); // 'a' = reference; heap එකේ object එකක්
+Customer b = a;                        // b සහ a එකම object එකට point කරනවා!
+
+b.recordPurchase(500);                 // b හරහා වෙනස් කරාට...
+System.out.println(a.getTotalSpend()); // 500.0 — a ටත් පේනවා (එකම object)
+
+Customer c = null;                     // c කිසි object එකකට point කරන්නෙ නෑ
+// c.getTotalSpend();                  //  NullPointerException!`,
+        note: 'reference = object එකේ "address"; null reference එකකින් method call = NPE.',
       },
     ],
     mortar:
-      'Mortar එකේ පාරිභෝගිකයෙක් (customer) කියන්නේ මූලික building block එක. Shopify, WooCommerce වගේ තැන් වලින් එන හැම customer කෙනෙක්ම `Customer` class එකේ object එකක් විදිහට heap එකේ නිර්මාණය වෙනවා — email, spend, orders එක්ක. හැම object එකකටම තමන්ගේම golden record එකක්.',
+      'Mortar එකේ `Customer` කියන්නේ මුළු platform එකේම මූලික building block එක. Shopify, WooCommerce, CSV upload — කොහෙන් ආවත් හැම customer කෙනෙක්ම `Customer` class එකේ object එකක් විදිහට heap එකේ හැදෙනවා (email, spend, orders, segments එක්ක). Identity resolution එකේදී මේ objects මිලියන ගණන් memory එකේ; හැම එකකටම තමන්ගේම "golden record" state එකක්. Class එක හරියට design කරගැනීම මුළු system එකේම පදනම.',
     keyPoints: [
-      'Class = template/blueprint (memory එකේ නෑ). Object = `new` වලින් හදන instance එක.',
-      'State = fields, Behavior = methods.',
-      'එක class එකකින් independent objects කීයක් හරි හදන්න පුළුවන්.',
+      'Class = blueprint/template (memory එකේ නෑ). Object = `new` වලින් heap එකේ හදන instance එක.',
+      'State = fields (data); Behavior = methods (actions). Object = දෙකම එකට.',
+      'එක class එකකින් හදන objects independent — වෙන වෙනම state.',
+      'Reference (`alice`) ≠ object — reference එක object එකේ address එක; කිහිප reference එකක් එකම object එකට point කරන්න පුළුවන්.',
     ],
     pitfalls: [
-      'Object එකක් `new` නොකර method call කලොත් `NullPointerException`.',
-      'Class එකයි Object එකයි එකම දෙයක් නෙවෙයි — class එක design එක, object එක runtime instance එක.',
+      '`null` reference එකකින් method call කලොත් `NullPointerException` (object එකක් `new` කරලා නෑ).',
+      'Class එකයි object එකයි එකතු කරන්න එපා — class = design (compile-time), object = ඇත්ත instance (run-time).',
+      '`==` reference දෙකක් compare කරනවා (එකම object එකද?), content නෙවෙයි — content compare කරන්න `.equals()`.',
     ],
   },
 
@@ -310,15 +357,34 @@ c.sync(); // -> "Two-way sync via Klaviyo"`,
     sinhala: [
       {
         heading: 'කතාව: Mortar එකේ connectors problem එක',
-        body: 'හිතන්න ඔයා Mortar team එකට අලුතෙන් join වුණා. ඔයාට වැඩේ — Shopify, WooCommerce, Klaviyo වගේ platforms වලින් customers sync කරන "connectors" හදන්න. පොඩ්ඩක් බලද්දී ඔයාට පේනවා — හැම connector එකක්ම එකම steps 3ක් කරනවා: (1) login/authenticate වෙනවා, (2) data sync කරනවා, (3) "done" කියලා notify කරනවා. වෙනස් වෙන්නේ මැද step එක (sync) විතරයි — Shopify sync කරන විදිහයි Klaviyo sync කරන විදිහයි වෙනස්. දැන් හැම connector එකකම මේ login + notify code එක copy-paste කරොත්? bug එකක් හදුනොත් තැන් 15කම fix කරන්න වෙනවා. එහෙම කරන්න එපා!',
+        body: 'හිතන්න ඔයා Mortar team එකට අලුතෙන් join වුණා. ඔයාට වැඩේ — Shopify, WooCommerce, Klaviyo වගේ platforms වලින් customers sync කරන "connectors" හදන්න. පොඩ්ඩක් බලද්දී ඔයාට පේනවා, හැම connector එකක්ම එකම steps 3ක් කරනවා:',
+        points: [
+          'login / authenticate වෙනවා — මේ step එක හැම connector එකකටම එකයි.',
+          'data sync කරනවා — මේ step එක විතරයි platform එකට වෙනස් (Shopify sync කරන විදිහ ≠ Klaviyo sync කරන විදිහ).',
+          '"done" කියලා notify කරනවා — මේ step එකත් හැම connector එකකටම එකයි.',
+        ],
+      },
+      {
+        heading: 'ප්‍රශ්නෙ: copy-paste කරොත්?',
+        body: 'දැන් හැම connector එකකම මේ login + notify code එක copy-paste කරොත්, connectors 15ක් තියෙනවා නම් එකම code එක තැන් 15ක. bug එකක් හදුනොත් තැන් 15කම fix කරන්න වෙනවා — maintainability අනතුරක්. ඒ නිසා පොදු code එක එක තැනක තියාගන්න විදිහක් ඕන. ඒකට තමයි abstract class.',
       },
       {
         heading: 'විසඳුම: Abstract class එකක්',
-        body: 'Tech lead කියනවා — "පොදු steps ටික එක තැනක තියන්න, වෙනස් වෙන step එක විතරක් හිස් තියන්න." ඒකට තමයි **abstract class**. `abstract` කියලා class එකක් හදනකොට: (1) ඒක කෙලින්ම `new` කරන්න බෑ — ("Connector" කෙනෙක් තනිකරම නෑ, Shopify connector, Klaviyo connector වගේ concrete අය තමයි ඉන්නේ). (2) ඒකට පොදු code තියෙන normal methods (concrete) තියෙන්න පුළුවන් — `login()`, `notify()`. (3) ඒකට body නැති `abstract` methods තියෙන්න පුළුවන් — `sync()` — ඒක subclass එක ලියන්නම ඕන. හැම subclass එකක්ම common code එක නොමිලේ උරුම කරගෙන, තමන්ගේ sync() එක විතරක් ලියනවා.',
+        body: 'Tech lead කියනවා — "පොදු steps ටික එක තැනක තියන්න, වෙනස් වෙන step එක විතරක් හිස් තියන්න." ඒකට තමයි abstract class. `abstract` කියලා class එකක් හදනකොට:',
+        points: [
+          'ඒක කෙලින්ම `new` කරන්න බෑ — "Connector" කෙනෙක් තනිකරම නෑ; Shopify connector, Klaviyo connector වගේ concrete අය තමයි ඉන්නේ.',
+          'ඒකට පොදු code තියෙන normal (concrete) methods තියෙන්න පුළුවන් — `login()`, `notify()` වගේ.',
+          'ඒකට body නැති `abstract` methods තියෙන්න පුළුවන් — `sync()` වගේ — ඒ method එක subclass එක ලියන්නම ඕන.',
+          'හැම subclass එකක්ම common code එක නොමිලේ උරුම කරගෙන, තමන්ගේ `sync()` එක විතරක් ලියනවා.',
+        ],
       },
       {
         heading: 'මතක තියාගන්න rules 3ක්',
-        body: '(1) Abstract class එකක් `new` කරන්න බෑ — subclass එකක් හරහා විතරයි use කරන්නේ. (2) Subclass එකක් abstract methods **ඔක්කොම** implement කරන්නම ඕන (නැත්නම් ඒ subclass එකත් abstract වෙන්න ඕන). (3) Abstract class එකට normal class එකක් වගේ fields (state), constructors, concrete methods තියෙන්න පුළුවන් — interface එකට වඩා මේක ලොකු වෙනසක්.',
+        points: [
+          'Abstract class එකක් `new` කරන්න බෑ — subclass එකක් හරහා විතරයි use කරන්නේ.',
+          'Subclass එකක් abstract methods ඔක්කොම implement කරන්නම ඕන — නැත්නම් ඒ subclass එකත් `abstract` වෙන්න ඕන.',
+          'Abstract class එකට normal class එකක් වගේ fields (state), constructors, සහ concrete methods තියෙන්න පුළුවන් — interface එකට වඩා මේක ලොකු වෙනසක්.',
+        ],
       },
     ],
     analogy:
@@ -532,7 +598,14 @@ List<Customer> clean = c.fetchValidOnly(); // default (calls class's fetch())`,
       },
       {
         heading: 'Point-by-point වෙනස',
-        body: 'Inheritance: class එකකට abstract class **එකයි** extend කරන්න පුළුවන්; interfaces **කිහිපයක්** implement කරන්න පුළුවන්. State: abstract class එකට instance fields (`private double spend;` වගේ mutable state) තියෙන්න පුළුවන්; interface එකට constants (`public static final`) විතරයි. Constructors: abstract class එකට තියෙනවා (subclass එකෙන් `super(...)` call වෙනවා); interface එකට නෑ. Methods: abstract class එකට `private`/`protected`/`public` ඕන එකක්; interface members public (private helpers hidden). Relationship: abstract class = "IS-A" (identity — Dog IS-A Animal); interface = "CAN-DO" (capability — Dog CAN Swim).',
+        body: 'මූලික වෙනස්කම් 5ක්:',
+        points: [
+          'Inheritance: class එකකට abstract class එකයි `extend` කරන්න පුළුවන්; interfaces කිහිපයක් `implement` කරන්න පුළුවන්.',
+          'State: abstract class එකට instance fields (mutable state — `private double spend;` වගේ) තියෙන්න පුළුවන්; interface එකට constants (`public static final`) විතරයි.',
+          'Constructors: abstract class එකට තියෙනවා (subclass එකෙන් `super(...)` call වෙනවා); interface එකට නෑ.',
+          'Methods: abstract class එකට `private`/`protected`/`public` ඕන එකක්; interface members public (private helpers ඇතුලෙ hidden).',
+          'Relationship: abstract class = "IS-A" (identity — Dog IS-A Animal); interface = "CAN-DO" (capability — Dog CAN Swim).',
+        ],
       },
       {
         heading: 'කවදා මොකක්ද තෝරන්නේ (decision guide)',
@@ -774,7 +847,17 @@ class SyncJob implements Auditable, Trackable {
       },
       {
         heading: 'ඇයි composition වඩා හොඳ',
-        body: '(1) Flexible — parts කීයක් හරි mix කරන්න පුළුවන් (single inheritance limit එකක් නෑ). (2) Loosely coupled — parts වෙනම, එකක් වෙනස් කලාට අනිත්වා safe. (3) Testable — test එකකදී real HttpClient එක වෙනුවට fake/mock එකක් inject කරන්න පුළුවන් (මේක Spring DI + DIP — 5.1.5 — වලට පදනම). (4) Runtime swap — configuration එකට අනුව වෙනස් part එකක් plug කරන්න පුළුවන්. **රීතිය: inheritance එක ඇත්තටම "IS-A" වෙනකොට විතරක්; ඉතුරු වෙලාවට composition.**',
+        body: 'Composition එකෙන් එන ප්‍රධාන වාසි 4ක්:',
+        points: [
+          'Flexible — parts කීයක් හරි mix කරන්න පුළුවන් (single-inheritance limit එකක් නෑ).',
+          'Loosely coupled — parts වෙනම; එකක් වෙනස් කලාට අනිත්වාට safe.',
+          'Testable — test එකකදී real HttpClient එක වෙනුවට fake/mock එකක් inject කරන්න පුළුවන් (Spring DI + DIP, 5.1.5 වලට පදනම).',
+          'Runtime swap — configuration එකට අනුව වෙනස් part එකක් plug කරන්න පුළුවන්.',
+        ],
+      },
+      {
+        heading: 'රීතිය',
+        body: 'Inheritance එක use කරන්නේ ඇත්තටම "IS-A" relationship එකක් තියෙනකොට විතරයි; ඉතුරු හැම වෙලාවකම composition තෝරන්න.',
       },
     ],
     analogy:

@@ -29,7 +29,16 @@
         @for (block of c.sinhala; track block.heading) {
           <div class="block">
             <h3 class="block__h">{{ block.heading }}</h3>
-            <p class="block__body" lang="si">{{ block.body }}</p>
+            @if (block.body) {
+              <p class="block__body" lang="si">{{ block.body }}</p>
+            }
+            @if (block.points?.length) {
+              <ol class="block__points" lang="si">
+                @for (pt of block.points; track pt) {
+                  <li>{{ pt }}</li>
+                }
+              </ol>
+            }
           </div>
         }
       </section>

@@ -75,6 +75,42 @@
 }
 .block__body { margin: 0; line-height: 1.85; color: var(--text-2); font-size: 1.02rem; }
 
+.block__points {
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: pt;
+  display: grid;
+  gap: 0.6rem;
+}
+.block__points li {
+  counter-increment: pt;
+  position: relative;
+  padding: 0.55rem 0.8rem 0.55rem 2.6rem;
+  line-height: 1.75;
+  color: var(--text-2);
+  font-size: 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.block__points li::before {
+  content: counter(pt);
+  position: absolute;
+  left: 0.7rem;
+  top: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: grid;
+  place-items: center;
+  font: 700 0.8rem/1 var(--mono);
+  color: #1a1206;
+  background: var(--accent);
+  border-radius: 7px;
+}
+/* when a block has both prose and points, tighten the gap */
+.block__body + .block__points { margin-top: 1rem; }
+
 .analogy {
   margin: 1.6rem 0;
   padding: 1.2rem 1.4rem;

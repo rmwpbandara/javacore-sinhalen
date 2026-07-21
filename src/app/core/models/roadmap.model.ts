@@ -11,8 +11,10 @@
 export interface SinhalaBlock {
   /** Short English heading for the block (kept English per requirements). */
   heading: string;
-  /** The explanation body. Sinhala with English technical words mixed in. */
-  body: string;
+  /** Intro/explanation prose (optional if the block is purely a points list). */
+  body?: string;
+  /** Optional step-by-step / numbered points, rendered as an ordered list. */
+  points?: string[];
 }
 
 /** A syntax-highlighted code example shown on a concept page. */
