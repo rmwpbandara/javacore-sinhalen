@@ -1038,187 +1038,350 @@ Repository<Customer> repo = new Repository<>(Customer.class);`,
 
   '2.4.1': {
     summary:
-      'Thread lifecycle: NEW → RUNNABLE → RUNNING ↔ (BLOCKED/WAITING/TIMED_WAITING) → TERMINATED.',
+      'Thread එකක් කියන්නේ independent execution path එකක් — programs එකවර වැඩ කිහිපයක් කරන්න. Thread lifecycle: NEW → RUNNABLE → RUNNING ↔ (BLOCKED / WAITING / TIMED_WAITING) → TERMINATED.',
     sinhala: [
       {
-        heading: 'States',
-        body: 'Thread එකක් `new` කලාම NEW. `start()` කලාම RUNNABLE (scheduler එක run කරනකම්). Lock එකක් බලාගෙන ඉන්නකොට BLOCKED, `wait()`/`join()` වලින් WAITING, `sleep(ms)` වලින් TIMED_WAITING. `run()` ඉවර වුනාම TERMINATED. States තේරුම්ගැනීම deadlock/performance debug කරන්න වැදගත්.',
+        heading: 'කතාව: connectors 15ක් එකවර sync කරන්න',
+        body: 'Mortar එකට connectors 15ක් තියෙනවා. එකින් එක (sequentially) sync කරොත් — Shopify (30s) + Klaviyo (30s) + ... = විනාඩි ගොඩක්! ඒත් මේ syncs ගොඩක්ම network එකට බලාගෙන ඉන්නවා (IO-bound). එකවර (parallel) කරොත් ඔක්කොම 30sකින් ඉවර. ඒකට **threads** — එක program එකක් ඇතුලේ independent execution paths කිහිපයක්. Thread එකක් ඒකෙම lifecycle එකක් හරහා යනවා; ඒ states තේරුම්ගැනීම concurrency debug කරන්න අත්‍යවශ්‍යයි.',
+      },
+      {
+        heading: 'Thread states',
+        body: 'Thread එකක් යන states:',
+        points: [
+          '`NEW` — thread object එක හැදුවා, ඒත් `start()` කරලා නෑ.',
+          '`RUNNABLE` — `start()` කරා; run වෙන්න ready (OS scheduler එක CPU දෙනකම්). "running" ත් මේකට ඇතුළත්.',
+          '`BLOCKED` — synchronized lock එකකට බලාගෙන.',
+          '`WAITING` — `wait()`/`join()` වලින් අනිත් thread එකකින් signal එකක් එනකම් (indefinite).',
+          '`TIMED_WAITING` — `sleep(ms)`/`wait(ms)` — නියමිත කාලයක්.',
+          '`TERMINATED` — `run()` ඉවරයි (හෝ exception එකකින් නැවතුණා).',
+        ],
       },
     ],
     analogy:
-      'Employee කෙනෙක් වගේ: hired (NEW), ready (RUNNABLE), working (RUNNING), meeting එකක බලාන් (WAITING), lunch break (TIMED_WAITING), resigned (TERMINATED).',
+      'Employee කෙනෙක්ගේ තත්ත්වයන් වගේ: hired but not started (NEW), ready at desk (RUNNABLE), working (RUNNING), waiting for a meeting room key (BLOCKED), waiting for approval (WAITING), lunch break till 1pm (TIMED_WAITING), resigned (TERMINATED).',
     code: [
       {
-        filename: 'Lifecycle.java',
+        filename: 'ThreadLifecycle.java',
         language: 'java',
         code: `Thread t = new Thread(() -> {
-    System.out.println("syncing...");   // RUNNABLE -> RUNNING
+    System.out.println("syncing...");    // RUNNABLE -> RUNNING
 });
-System.out.println(t.getState());       // NEW
-t.start();
-t.join();                                // main WAITS for t
-System.out.println(t.getState());       // TERMINATED`,
-        note: 'start() → RUNNABLE; join() = අනිත් thread එක ඉවර වෙනකම් බලනවා.',
+
+System.out.println(t.getState());        // NEW
+t.start();                               // NEW -> RUNNABLE
+t.join();                                // main thread WAITING (t ඉවර වෙනකම්)
+System.out.println(t.getState());        // TERMINATED`,
+        note: 'start() → RUNNABLE; join() = අනිත් thread එක ඉවර වෙනකම් බලනවා (WAITING).',
+      },
+      {
+        filename: 'StartVsRun.java',
+        language: 'java',
+        code: `Runnable task = () -> System.out.println(Thread.currentThread().getName());
+
+Thread t = new Thread(task);
+t.start();      // ✅ අලුත් thread එකක් හදනවා -> "Thread-0"
+// t.run();     //  අලුත් thread එකක් නෑ! main thread එකේම run වෙනවා -> "main"`,
+        note: '`start()` = අලුත් thread; `run()` = current thread එකේම (thread එකක් නෑ!).',
       },
     ],
     mortar:
-      'Mortar background sync/prediction threads lifecycle එක monitor කරලා stuck (BLOCKED/WAITING forever) jobs detect කරනවා — connection health / proactive error alerts වලට.',
+      'Mortar background sync/prediction/enrichment threads lifecycle එක monitor කරලා stuck (BLOCKED/WAITING forever) jobs detect කරනවා — connection health + proactive error alerts (PROJECT_IDEA 10.4) වලට. Thread dumps (`jstack`) වලින් හැම thread එකේම state බලලා deadlocks/hangs diagnose කරනවා. Practice එකේ manual threads වෙනුවට Executors (2.4.6.1) use කරනවා, ඒත් මේ underlying states තේරුම්ගැනීම debugging එකට critical.',
     keyPoints: [
       'NEW → RUNNABLE → RUNNING → (BLOCKED/WAITING/TIMED_WAITING) → TERMINATED.',
-      '`start()` (RUNNABLE) vs `run()` (same thread, no new thread).',
-      'BLOCKED = lock එකට; WAITING = signal එකට.',
+      '`start()` = අලුත් thread; `run()` = current thread එකේම (thread එකක් හදන්නෙ නෑ).',
+      'BLOCKED = lock එකට; WAITING = signal එකට; TIMED_WAITING = timeout එකට.',
+      'Threads = parallel execution — IO-bound work වලට ලොකු speedup.',
+    ],
+    pitfalls: [
+      '`run()` කෙලින්ම call කරන එක common bug — thread එකක් හැදෙන්නෙ නෑ, sequential run වෙනවා. `start()` use කරන්න.',
+      'Thread එකක් `start()` දෙපාරක් කරන්න බෑ — `IllegalThreadStateException`.',
     ],
   },
 
   '2.4.2': {
     summary:
-      'Thread create කරන්න: Thread extend, Runnable implement (හොඳම), හෝ Callable (result + exception).',
+      'Threads හදන ක්‍රම 3ක්: `Thread` class extend (inheritance waste), `Runnable` implement (**preferred** — task/thread වෙන් කරයි), `Callable<T>` (result + checked exception — `Future` එකෙන් result ගන්නවා).',
     sinhala: [
       {
+        heading: 'කතාව: task එක return එකක් දෙනවා නම්?',
+        body: 'Mortar connector sync එකක් fire-and-forget නම් (result ඕන නෑ) — `Runnable` හොඳයි. ඒත් "customers කී දෙනෙක් sync වුනාද?" වගේ **result** එකක් ඕන නම්? `Runnable` void return — result දෙන්න බෑ. ඒකට `Callable<T>` — result එකක් return කරනවා, checked exception එකකුත් throw කරන්න පුළුවන්. Result එක `Future` object එකකින් ගන්නවා.',
+      },
+      {
         heading: 'තුන් ක්‍රමය',
-        body: '`Thread` extend කරන එක simple ඒත් inheritance එක waste. `Runnable` implement කරන එක preferred — task එකයි thread එකයි වෙන් කරනවා, lambda වලින් clean. `Callable<T>` = Runnable වගේ ඒත් result එකක් return කරනවා + checked exception throw කරන්න පුළුවන් (`Future` එකෙන් result ගන්නවා).',
+        body: 'Threads/tasks හදන විදි:',
+        points: [
+          '`Thread` extend — simple, ඒත් single inheritance එක waste වෙනවා (parent එකක් තියෙනවා නම් බෑ). Recommend කරන්නෙ නෑ.',
+          '`Runnable` implement — task එකයි thread එකයි වෙන් කරනවා. `void run()`, no result. Lambda වලින් clean. **Preferred.**',
+          '`Callable<T>` implement — Runnable වගේ, ඒත් `T call()` — **result** return කරනවා + checked exception throw කරන්න පුළුවන්.',
+          'නවීන code: manual threads වෙනුවට Runnable/Callable ExecutorService (2.4.6.1) එකට submit කරනවා.',
+        ],
       },
     ],
     analogy:
-      'Runnable = "වැඩේ කරන්න" (return එකක් නෑ). Callable = "වැඩේ කරලා answer එකක් දෙන්න" (return + error report).',
+      '`Runnable` = "වැඩේ කරන්න" කියලා employee කෙනෙක්ට දෙන task එකක් (report එකක් ඕන නෑ). `Callable` = "වැඩේ කරලා ප්‍රතිඵලය දෙන්න" (report + "අවුලක් වුනොත් කියන්න"). `Future` = ඒ report එක ගන්න ticket එක.',
     code: [
       {
-        filename: 'CreateThreads.java',
+        filename: 'RunnableThread.java',
         language: 'java',
-        code: `// Runnable (preferred) - no result
+        code: `// Runnable (preferred) — result නෑ, lambda වලින් clean
 Runnable syncTask = () -> System.out.println("sync done");
 new Thread(syncTask).start();
 
-// Callable - returns a result, used with ExecutorService
-Callable<Integer> countTask = () -> repo.countCustomers();
+// Runnable ExecutorService එකට submit කරන එක modern විදිහ
 ExecutorService pool = Executors.newFixedThreadPool(4);
-Future<Integer> future = pool.submit(countTask);
-Integer count = future.get();  // waits for result`,
-        note: 'Result/exception ඕන නම් Callable + Future.',
+pool.submit(() -> System.out.println("pool thread එකේ"));
+pool.shutdown();`,
+        note: 'Runnable = void task; task එකයි thread එකයි වෙන් (composition).',
+      },
+      {
+        filename: 'CallableFuture.java',
+        language: 'java',
+        code: `// Callable — result එකක් return කරනවා
+Callable<Integer> countTask = () -> {
+    return repo.countCustomers();      // result + checked exception OK
+};
+
+ExecutorService pool = Executors.newFixedThreadPool(4);
+Future<Integer> future = pool.submit(countTask);   // Future = "result ticket"
+
+// වෙන වැඩ කරන්න පුළුවන් මේ අතරේ...
+Integer count = future.get();          // result එනකම් block වෙනවා (හෝ ready නම් වහාම)
+System.out.println(count);
+pool.shutdown();`,
+        note: 'Callable + Future = async result (2.4.6.2 CompletableFuture වඩාත් powerful).',
       },
     ],
     mortar:
-      'Mortar parallel connector syncs — fire-and-forget නම් `Runnable`, count/result ඕන නම් `Callable` + `Future`. නවීන code එකේ threads manual නොකර ExecutorService වලට submit කරනවා.',
+      'Mortar parallel connector syncs — fire-and-forget නම් `Runnable`; "sync එකෙන් customers කී දෙනෙක් ආවද" වගේ count/result ඕන නම් `Callable` + `Future`. Nightly churn recompute jobs Callable විදිහට submit කරලා results aggregate කරනවා. නවීන Mortar code එකේ threads manual `new Thread` නොකර, tasks ExecutorService (2.4.6.1) වලට submit කරනවා — safer, bounded, reusable.',
     keyPoints: [
-      'Runnable = no result; Callable = result + checked exception.',
-      'Thread extend එකට වඩා Runnable/Callable + Executor හොඳයි.',
-      'Manual `new Thread` avoid — pools use කරන්න.',
+      'Runnable = no result (void); Callable = result + checked exception.',
+      'Thread extend එකට වඩා Runnable/Callable (task/thread separation) හොඳයි.',
+      'Callable result → `Future.get()` (block වෙනවා result එනකම්).',
+      'Manual `new Thread` avoid — Executors (2.4.6.1) use කරන්න.',
+    ],
+    pitfalls: [
+      '`Thread` extend කරලා `run()` override කරලා, ආපහු `run()` call කරන එක — thread එකක් හැදෙන්නෙ නෑ (`start()` ඕන).',
+      '`future.get()` block වෙනවා — timeout එකක් නැතුව call කරොත් forever hang වෙන්න පුළුවන් (`get(timeout, unit)` use කරන්න).',
     ],
   },
 
   '2.4.3': {
     summary:
-      'synchronized = එකවර එක thread එකකට විතරක් critical section එකට යන්න දෙනවා (mutual exclusion).',
+      '`synchronized` = එකවර එක thread එකකට විතරක් critical section එකට යන්න දෙනවා (mutual exclusion). Shared mutable state race conditions වළක්වනවා — atomicity + visibility දෙකම දෙනවා.',
     sinhala: [
       {
-        heading: 'Locks + mutual exclusion',
-        body: 'Shared mutable state එකකට threads කිහිපයක් එකවර access කලොත් race conditions. `synchronized` method/block එකක් object එකේ monitor lock එක ගන්නවා — එකවර එක thread එකයි ඇතුලට. ඒ නිසා atomicity + visibility දෙකම. Lock scope එක හැකිතරම් කුඩා තියාගන්න.',
+        heading: 'කතාව: counter එක වැරදි ගණන් වෙනවා',
+        body: 'Mortar sync progress එකට processed-records counter එකක් තියෙනවා. Threads 4ක් එකවර `count++` කරනවා. ඒත් අන්තිමට count එක වැරදියි — expected 4000, ඒත් 3847! ඇයි? `count++` කියන්නේ steps 3ක් — read, add, write. Threads දෙකක් එකවර කරොත්, දෙන්නම එකම පරණ value එක read කරලා, එකම value එක write කරනවා — update එකක් නැති වෙනවා (race condition). විසඳුම — එකවර එක thread එකකට විතරක් `count++` කරන්න දෙන එක. ඒකට `synchronized`.',
+      },
+      {
+        heading: 'synchronized වැඩ කරන විදිහ',
+        body: 'Mutual exclusion + locks:',
+        points: [
+          'හැම object එකකටම intrinsic "monitor lock" එකක් තියෙනවා.',
+          '`synchronized` method/block එකට ඇතුල් වෙන්න thread එකක් ඒ lock එක ගන්නම ඕන.',
+          'එකවර එක thread එකයි lock එක අල්ලගෙන ඉන්නේ — ඉතුරු threads BLOCKED (2.4.1), lock release වෙනකම්.',
+          'atomicity (එකවර එකෙක්) + visibility (වෙනස්කම් අනිත් threads වලට පේනවා) දෙකම දෙනවා.',
+        ],
+      },
+      {
+        heading: 'Lock scope කුඩාවට',
+        body: 'Whole method එක `synchronized` කරනවා වෙනුවට, ඇත්තටම protect කරන්න ඕන කුඩා critical section එක විතරක් `synchronized` block එකකින් lock කරන්න — ඒ නිසා threads වැඩිපුර parallel වැඩ කරන්න පුළුවන් (throughput). Over-synchronize කලොත් program එක sequential වගේ slow.',
       },
     ],
     analogy:
-      'Single toilet එකක key එකක් වගේ — key එක තියෙන කෙනා ඉවර වෙනකම් අනිත් අය බලාගෙන ඉන්නවා.',
+      'Single toilet එකක key එකක් වගේ — key තියෙන කෙනා ඉවර වෙනකම් අනිත් අය පිටත බලාගෙන (BLOCKED). එකවර එක්කෙනෙක් විතරයි ඇතුලේ (mutual exclusion). Key එක කුඩා වැඩකට විතරයි අල්ලගෙන ඉන්නේ නම් (small lock scope), අනිත් අයට ඉක්මනට turn එක.',
     code: [
       {
-        filename: 'Synchronized.java',
+        filename: 'RaceCondition.java',
         language: 'java',
-        code: `class SyncCounter {
-    private int processed = 0;
+        code: `class Counter {
+    private int count = 0;
 
-    public synchronized void increment() { processed++; } // atomic
+    // synchronized method — එකවර එක thread එකයි
+    public synchronized void increment() {
+        count++;             // atomic දැන් (read+add+write එකවර එකෙක්)
+    }
+
+    public synchronized int get() { return count; }
+}
+// threads 4ක් increment() කරාට count නිවැරදියි (race condition නෑ)`,
+        note: 'synchronized method → mutual exclusion → race condition නෑ.',
+      },
+      {
+        filename: 'SyncBlock.java',
+        language: 'java',
+        code: `class SyncService {
+    private int processed = 0;
+    private final Object lock = new Object();   // dedicated lock object
 
     public void process(Batch b) {
-        // narrow lock scope: lock only the shared update
-        doWork(b);
-        synchronized (this) { processed += b.size(); }
+        doExpensiveWork(b);                     // lock එකෙන් පිට (parallel OK)
+
+        synchronized (lock) {                   // කුඩා critical section විතරයි lock
+            processed += b.size();
+        }
     }
-    private void doWork(Batch b) { /* ... */ }
+    private void doExpensiveWork(Batch b) { }
 }`,
-        note: 'Lock scope කුඩාවට තියාගන්න — throughput වැඩියි.',
+        note: 'Lock scope කුඩාවට → threads වැඩිපුර parallel → throughput වැඩියි.',
       },
     ],
     mortar:
-      'Mortar sync progress counters (processed records) threads කිහිපයකින් update වෙනවා. `synchronized` (හෝ `AtomicLong`) වලින් count එක race condition නැතුව නිවැරදිව තියාගන්නවා — UI progress bar එකට.',
+      'Mortar sync progress counters (processed records — UI progress bar එකට) threads කිහිපයකින් update වෙනවා. `synchronized` (හෝ වඩා හොඳ `AtomicLong` — 2.4.6) වලින් count එක race condition නැතුව නිවැරදිව. Shared caches, config maps වගේ mutable shared state protect කරන්න synchronized/concurrent collections. Lock scope කුඩාවට තියාගෙන high-throughput ingestion pipeline එකක් තියාගන්නවා.',
     keyPoints: [
-      'synchronized = mutual exclusion (එකවර එක thread).',
+      '`synchronized` = mutual exclusion (එකවර එක thread critical section එකට).',
+      'Race conditions (`count++` lost updates) වළක්වයි.',
       'Atomicity + visibility දෙකම දෙනවා.',
-      'Lock scope කුඩාවට; over-synchronize = slow.',
+      'Lock scope කුඩාවට තියන්න — over-synchronize = slow.',
     ],
-    pitfalls: ['Locks කිහිපයක් වැරදි order එකෙන් ගත්තොත් deadlock.'],
+    pitfalls: [
+      'Locks කිහිපයක් වැරදි order එකෙන් ගත්තොත් deadlock (2.4.5).',
+      'Over-synchronization = threads බලාගෙන ඉන්නවා ගොඩක් = performance මරනවා. Simple counters වලට `Atomic*` classes හොඳයි.',
+    ],
   },
 
   '2.4.4': {
     summary:
-      'wait()/notify()/notifyAll() = synchronized block ඇතුලේ threads අතර coordinate කරන එක (producer-consumer).',
+      '`wait()` / `notify()` / `notifyAll()` = threads එකිනෙක **coordinate** කරන එක (producer-consumer). `synchronized` block ඇතුලේ, `while(condition)` loop එකක් ඇතුලේ පාවිච්චි කරන්නම ඕන.',
     sinhala: [
       {
-        heading: 'Inter-thread signalling',
-        body: '`wait()` — thread එක lock එක release කරලා, notify එකක් එනකම් WAITING වෙනවා. `notify()` — waiting threads වලින් එකකට signal, `notifyAll()` — ඔක්කොටම. හැමවිටම `synchronized` block ඇතුලේ, `while (condition)` loop එකක් ඇතුලේ පාවිච්චි කරන්න (spurious wakeups නිසා).',
+        heading: 'කතාව: worker එක job එකක් එනකම් බලාගෙන',
+        body: 'Mortar job queue එකක් තියෙනවා — producer threads (connectors) jobs දානවා, worker threads process කරනවා. Queue එක හිස් නම්, worker එක මොකද කරන්නේ? Busy-loop එකක (`while(queue.isEmpty()) {}`) බලාගෙන ඉන්නවා නම් — CPU 100% නාස්ති! ඕන වෙන්නේ — worker එක "නිදාගෙන" (efficient wait), job එකක් ආවම producer එක "අවදි කරන" (notify) එක. ඒකට `wait()`/`notify()`.',
+      },
+      {
+        heading: 'wait/notify rules',
+        body: 'Inter-thread signalling:',
+        points: [
+          '`wait()` — thread එක lock එක **release කරලා** WAITING වෙනවා (notify එකක් එනකම්). CPU නාස්ති නෑ.',
+          '`notify()` — waiting threads වලින් **එකකට** signal; `notifyAll()` — **ඔක්කොටම**.',
+          'තුනම `synchronized` block/method එකක් ඇතුලේ විතරයි call කරන්න පුළුවන් (lock එක තියෙන්නම ඕන).',
+          'Condition එක හැමවිටම `while` loop එකක් ඇතුලේ check කරන්න (`if` නෙවෙයි) — spurious wakeups + missed conditions වළක්වන්න.',
+        ],
       },
     ],
     analogy:
-      'Restaurant එකක waiter (consumer) බලාගෙන ඉන්නවා, chef (producer) "order ready!" කියලා notify කරනකම්.',
+      'Restaurant එකක waiter (consumer) chef "order ready!" කියනකම් බලාගෙන ඉන්නවා. Waiter නිකම් kitchen එකට දිගටම එබිකම් කරන්නෙ නෑ (busy-wait) — chef අවදි කරනකම් (notify) විවේකෙන් ඉන්නවා (wait). "Order ready!" කිව්වම (notify) waiter අවදි වෙලා ගන්නවා.',
     code: [
       {
-        filename: 'WaitNotify.java',
+        filename: 'JobQueue.java',
         language: 'java',
         code: `class JobQueue {
     private final Queue<String> jobs = new LinkedList<>();
 
     public synchronized void submit(String job) {
         jobs.add(job);
-        notify();                         // wake a waiting worker
+        notify();                       // waiting worker එකක් අවදි කරනවා
     }
+
     public synchronized String take() throws InterruptedException {
-        while (jobs.isEmpty()) wait();    // release lock, wait
+        while (jobs.isEmpty()) {        // 'while' — 'if' නෙවෙයි!
+            wait();                     // lock release කරලා බලාගෙන (CPU නාස්ති නෑ)
+        }
         return jobs.poll();
     }
 }`,
-        note: 'while loop ඇතුලේ wait() — spurious wakeups වලට safe.',
+        note: 'while loop ඇතුලේ wait() — spurious wakeups + missed signals වලට safe.',
+      },
+      {
+        filename: 'PreferBlockingQueue.java',
+        language: 'java',
+        code: `// modern විදිහ: wait/notify manual නොකර BlockingQueue (2.4.6.3)
+BlockingQueue<String> jobs = new LinkedBlockingQueue<>();
+
+// producer
+jobs.put("job-1");        // full නම් block (wait/notify built-in)
+
+// consumer
+String job = jobs.take(); // empty නම් block — manual wait/notify ඕන නෑ`,
+        note: 'Practice එකේ wait/notify වෙනුවට BlockingQueue prefer කරන්න.',
       },
     ],
     mortar:
-      'Mortar internal job queue එකක producer threads (connectors) jobs දානවා, worker threads process කරනවා. wait/notify (හෝ BlockingQueue) වලින් busy-waiting නැතුව efficient coordination. Practice එකේදී `BlockingQueue` prefer කරනවා.',
+      'Mortar internal job queue එකක producer threads (connectors) jobs දානවා, worker threads process කරනවා. wait/notify (හෝ practically `BlockingQueue` — 2.4.6.3) වලින් busy-waiting නැතුව efficient coordination — CPU නාස්ති නෑ, workers jobs එනකම් විවේකෙන්. මේ producer-consumer pattern එක Mortar real-time streaming ingestion pipeline එකේ හදවත. නවීන code එකේ low-level wait/notify වෙනුවට higher-level `BlockingQueue` prefer කරනවා.',
     keyPoints: [
-      'wait/notify = synchronized block ඇතුලේ විතරයි.',
-      'Condition එක `while` loop එකක check කරන්න.',
+      'wait/notify = threads coordinate (producer-consumer).',
+      'තුනම `synchronized` block ඇතුලේ විතරයි.',
+      'Condition එක `while` loop එකක check කරන්න (spurious wakeups).',
       'Modern code: `BlockingQueue` / higher-level tools prefer.',
+    ],
+    pitfalls: [
+      '`wait()` `if` එකක් ඇතුලේ දාන එක — spurious wakeup එකකදී condition satisfy නොවී continue වෙනවා. හැමවිටම `while`.',
+      '`synchronized` block එකකින් පිට `wait()`/`notify()` call කරොත් `IllegalMonitorStateException`.',
     ],
   },
 
   '2.4.5': {
     summary:
-      'Deadlock (threads එකිනෙකා බලාගෙන), Livelock (busy ඒත් progress නෑ), Starvation (thread එකකට කවදාවත් turn නෑ).',
+      'Concurrency වල අන්තරායන් 3ක්: **Deadlock** (threads එකිනෙකා බලාගෙන, කවදාවත් progress නෑ), **Livelock** (busy ඒත් progress නෑ), **Starvation** (thread එකකට කවදාවත් resource නෑ). විසඳුම්: consistent lock order, timeouts, fairness.',
     sinhala: [
       {
-        heading: 'තුන් ප්‍රශ්නය',
-        body: 'Deadlock: A locks X, B locks Y; A wants Y, B wants X → දෙන්නම හිරවෙනවා. Livelock: threads reactively state වෙනස් කරනවා ඒත් progress නෑ (දෙන්නම එකිනෙකාට "ඔයා යන්න" කියනවා). Starvation: high-priority threads නිසා low-priority එකකට resource කවදාවත් නෑ. විසඳුම්: consistent lock ordering, timeouts, fair locks.',
+        heading: 'කතාව: sync job එක හිරවෙලා',
+        body: 'Mortar sync job එකක් DB lock එකයි cache lock එකයි දෙකම ඕන. Thread A: DB lock ගත්තා, දැන් cache lock එකට බලනවා. Thread B: cache lock ගත්තා, දැන් DB lock එකට බලනවා. දැන් දෙන්නම එකිනෙකා අල්ලගෙන ඉන්න lock එකට බලාගෙන — කවදාවත් නවතින්නෙ නෑ! Job එක forever hang. මේකට **deadlock**. Concurrency වල මේ වගේ අන්තරායන් 3ක් තියෙනවා.',
+      },
+      {
+        heading: 'අන්තරායන් 3',
+        body: 'තේරුම්ගන්න:',
+        points: [
+          'Deadlock — threads circular wait එකක. A → B ගේ lock එකට බලනවා, B → A ගේ lock එකට. දෙන්නම හිරවෙනවා (frozen).',
+          'Livelock — threads active, ඒත් එකිනෙකාට reactively response දීලා progress නෑ. (දෙන්නම එකම පැත්තට side වෙලා ආයෙ block වගේ).',
+          'Starvation — high-priority threads නිසා low-priority thread එකකට resource කවදාවත් නෑ (කවදාවත් turn එකක් නෑ).',
+          'විසඳුම්: හැම thread එකම locks එකම order එකෙන් ගන්න (consistent ordering), `tryLock(timeout)`, fair locks.',
+        ],
       },
     ],
     analogy:
-      'Deadlock = පටු පාරක cars දෙකක් මුහුණට මුහුණ, දෙන්නම reverse වෙන්නෙ නෑ. Livelock = දෙන්නම එකම පැත්තට side වෙලා ආයෙ block වෙනවා.',
+      'Deadlock = පටු පාරක cars දෙකක් මුහුණට මුහුණ — දෙන්නම reverse වෙන්නෙ නෑ (frozen). Livelock = දෙන්නම එකම පැත්තට side වෙලා, ආයෙ මුහුණට මුහුණ, ආයෙ අනිත් පැත්තට — active, ඒත් යන්න බෑ. Starvation = traffic එකේ, VIP cars නිතරම යනකොට සාමාන්‍ය car එකට කවදාවත් හරි නෑ.',
     code: [
       {
-        filename: 'Deadlock.java',
+        filename: 'DeadlockRisk.java',
         language: 'java',
-        code: `// DEADLOCK risk: inconsistent lock order
-// Thread 1: lock(a) then lock(b)
-// Thread 2: lock(b) then lock(a)
-
-// FIX: always acquire locks in the same global order
+        code: `// DEADLOCK risk: threads දෙකක් වෙනස් order එකෙන් locks ගන්නවා
+// Thread 1: synchronized(dbLock)   { synchronized(cacheLock) { } }
+// Thread 2: synchronized(cacheLock){ synchronized(dbLock)   { } }  //  reverse!
+// -> circular wait -> frozen`,
+        note: 'Inconsistent lock ordering = deadlock risk.',
+      },
+      {
+        filename: 'FixConsistentOrder.java',
+        language: 'java',
+        code: `// FIX: හැමවිටම එකම global order එකෙන් locks ගන්න
 void transfer(Account from, Account to) {
+    // id අනුව order කරලා — හැම thread එකම එකම order එකෙන්
     Account first  = from.id < to.id ? from : to;
     Account second = from.id < to.id ? to : from;
-    synchronized (first) { synchronized (second) { /* ... */ } }
+
+    synchronized (first) {
+        synchronized (second) {
+            // safe — circular wait වෙන්නෙ නෑ
+        }
+    }
 }`,
-        note: 'Consistent lock ordering = deadlock avoid.',
+        note: 'Consistent lock ordering → deadlock වළක්වයි.',
+      },
+      {
+        filename: 'TryLockTimeout.java',
+        language: 'java',
+        code: `// FIX 2: tryLock timeout — forever බලාගෙන ඉන්නෙ නැතුව
+ReentrantLock lock = new ReentrantLock();
+if (lock.tryLock(2, TimeUnit.SECONDS)) {   // 2s බලනවා, නැත්නම් අත්හරිනවා
+    try { /* work */ } finally { lock.unlock(); }
+} else {
+    log.warn("lock ගන්න බැරි වුණා — retry/skip");   // deadlock වෙනුවට graceful
+}`,
+        note: 'tryLock(timeout) → forever hang වෙනුවට graceful fail.',
       },
     ],
     mortar:
-      'Mortar multiple resources (DB + cache + external API) lock කරන jobs deadlock වෙන්න පුළුවන්. Consistent lock ordering + `tryLock` timeouts වලින් වළක්වනවා — sync pipeline එක hang වෙන්නෙ නෑ.',
+      'Mortar multiple resources (DB + Redis cache + external API) lock කරන jobs deadlock වෙන්න පුළුවන්. Consistent lock ordering + `tryLock` timeouts (2.4.6.4) වලින් වළක්වනවා — sync pipeline එක hang වෙන්නෙ නෑ. Starvation වළක්වන්න fair thread pools + priority balancing. Production concurrency bugs (hangs, frozen jobs) වල #1 හේතුව මේවා — ඒ නිසා locks හැකි තරම් අඩුවෙන්/කුඩාවට, consistent order එකෙන්.',
     keyPoints: [
-      'Deadlock = circular wait; Livelock = active no-progress; Starvation = no turn.',
-      'Fix: consistent lock order, timeouts (`tryLock`), fairness.',
-      'Locks හැකිතරම් අඩුවෙන්/කුඩාවට.',
+      'Deadlock = circular wait (frozen); Livelock = active no-progress; Starvation = no turn.',
+      'Fix: consistent lock ordering, `tryLock(timeout)`, fairness.',
+      'Locks හැකි තරම් අඩුවෙන් + කුඩාවට + එකම order එකෙන්.',
+      'Deadlock = production hangs වල common cause.',
+    ],
+    pitfalls: [
+      'Nested locks වෙනස් orders වලින් ගැනීම — #1 deadlock cause. Global ordering define කරන්න.',
+      'Livelock deadlock වගේ පේන්නෙ නෑ (threads busy) — ඒත් progress නෑ; detect කරන්න අමාරුයි.',
     ],
   },
 
