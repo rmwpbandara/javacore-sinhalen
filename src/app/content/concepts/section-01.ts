@@ -121,233 +121,452 @@ Customer c = null;                     // c කිසි object එකකට poi
 
   '1.1.2': {
     summary:
-      'Inheritance කියන්නේ එක class එකකට තව class එකකගේ fields/methods උරුම කරගන්න පුළුවන් වීම — `extends` keyword එකෙන්.',
+      'Inheritance = එක class එකකට තව class එකකගේ fields/methods "උරුම" කරගන්න පුළුවන් වීම — `extends` keyword එකෙන්. Code reuse + "IS-A" relationship එකක් එනවා.',
     sinhala: [
       {
-        heading: 'IS-A relationship',
-        body: 'Subclass එකක් superclass එකෙන් `extends` කරනකොට, superclass එකේ public/protected members ඔක්කොම subclass එකට උරුම වෙනවා. මේකෙන් code reuse එකයි, "IS-A" relationship එකයි එනවා — උදා: `ShopifyConnector` IS-A `Connector`.',
+        heading: 'කතාව: connectors වල පොදු code එක reuse කරමු',
+        body: 'ඔයා Mortar connectors ගොඩක් හදනවා — Shopify, WooCommerce, Klaviyo. හැම එකකටම brandId එකක් තියෙනවා, හැම එකක්ම connect() වෙන්න ඕන (එකම විදිහට). මේ පොදු දේවල් හැම connector class එකකම ආයෙ ලියනවා වෙනුවට, "පොදු දේවල් තියෙන parent class එකක්" හදලා, අනිත් ඒවා ඒකෙන් උරුම කරගන්න පුළුවන්. ඒකට තමයි inheritance — `extends` keyword එක.',
       },
       {
-        heading: 'super keyword',
-        body: '`super()` වලින් parent constructor එක call කරනවා, `super.method()` වලින් parent method එකේ version එක call කරනවා. Subclass එකට තමන්ගේම extra behaviour add කරන්නත්, parent behaviour override කරන්නත් පුළුවන්.',
+        heading: 'උරුම වෙන්නේ මොනවද?',
+        body: 'Subclass එකක් superclass එකෙන් `extends` කරනකොට, parent එකේ මේවා උරුම වෙනවා:',
+        points: [
+          '`public` සහ `protected` fields — subclass එකට කෙලින්ම access කරන්න පුළුවන් (උදා: brandId).',
+          '`public` සහ `protected` methods — ආයෙ ලියන්නෙ නැතුව use කරන්න පුළුවන් (උදා: connect()).',
+          '`private` members උරුම වෙන්නෙ නෑ — ඒවා parent එකට විතරයි (encapsulation).',
+          'Constructors උරුම වෙන්නෙ නෑ — ඒත් subclass එකෙන් `super(...)` වලින් call කරන්න පුළුවන්.',
+        ],
+      },
+      {
+        heading: 'IS-A relationship',
+        body: 'Inheritance එකෙන් "IS-A" සම්බන්ධයක් එනවා — `ShopifyConnector` **IS-A** `Connector`. ඒ නිසා Connector එකක් expect කරන ඕන තැනකට ShopifyConnector එකක් දාන්න පුළුවන් (මේකෙන් polymorphism එනවා — 1.1.5.2). රීතිය: inherit කරන්නේ ඇත්තටම "IS-A" වෙනකොට විතරයි (ShopifyConnector ඇත්තටම Connector කෙනෙක්). නිකම් code reuse එකට inherit කරන එක නරක design (එතනට composition — 1.2.6).',
+      },
+      {
+        heading: 'super keyword එක',
+        body: '`super` වලින් parent එකට reach කරනවා දෙ ආකාරයකට: `super(...)` — parent constructor එක call කරනවා (subclass constructor එකේ පළවෙනි line එක වෙන්නම ඕන). `super.method()` — parent එකේ method version එක call කරනවා (subclass එකේ override එකකින් වුණත්). ඒ නිසා subclass එකට parent behaviour එක "extend" කරන්න පුළුවන් — parent එක කරන දේ කරලා, ඒ උඩින් extra එකක් add කරනවා.',
       },
     ],
     analogy:
-      'ShopifyConnector, WooConnector දෙකම "Connector" කෙනෙක්ගේ දරුවෝ වගේ. දෙන්නම parent ගෙන් පොදු දේවල් (connect කරන හැටි) උරුම කරගෙන, තමන්ගේම විශේෂ දේවල් එකතු කරගන්නවා.',
+      'ShopifyConnector, WooConnector දෙකම "Connector" කෙනෙක්ගේ දරුවෝ වගේ. දෙන්නම තාත්තගෙන් පොදු දේවල් (connect කරන හැටි, brandId) උරුම කරගෙන, තමන්ගේම විශේෂ දක්ෂතා (Shopify sync, Woo sync) එකතු කරගන්නවා. දරුවා තාත්තගේ දෙයක් use කරන්නත්, තමන්ගේ විදිහට වෙනස් කරන්නත් (override) පුළුවන්.',
     code: [
       {
         filename: 'Connector.java',
         language: 'java',
-        code: `// Base class - every Mortar data source shares this
+        code: `// PARENT (superclass) — හැම Mortar data source එකකම පොදු දේවල්
 public class Connector {
-    protected String brandId;
+    protected String brandId;                // protected -> subclass වලට access
 
-    public Connector(String brandId) {
+    public Connector(String brandId) {       // constructor
         this.brandId = brandId;
     }
 
-    public void connect() {
-        System.out.println("Connecting brand " + brandId + "...");
+    public void connect() {                  // පොදු method — හැමෝම reuse කරනවා
+        System.out.println(brandId + ": connecting...");
     }
-}
 
-// ShopifyConnector IS-A Connector
+    private void loadSecrets() { }           // private -> subclass එකට උරුම වෙන්නෙ නෑ
+}`,
+        note: 'protected members subclass වලට උරුම වෙනවා; private members නෑ.',
+      },
+      {
+        filename: 'ShopifyConnector.java',
+        language: 'java',
+        code: `// CHILD (subclass) — ShopifyConnector IS-A Connector
 public class ShopifyConnector extends Connector {
+
     public ShopifyConnector(String brandId) {
-        super(brandId); // parent constructor call
+        super(brandId);            // parent constructor එකට brandId දෙනවා (පළවෙනි line)
     }
 
     public void syncOrders() {
-        connect(); // inherited method
-        System.out.println("Syncing Shopify orders");
+        connect();                 // parent එකෙන් උරුම වුණ method එක — ආයෙ ලියන්න ඕන නෑ
+        System.out.println(brandId + ": Shopify orders sync කරනවා"); // brandId ත් උරුමයි
+    }
+}
+
+class Demo {
+    public static void main(String[] args) {
+        ShopifyConnector c = new ShopifyConnector("brand-42");
+        c.syncOrders();  // connect() (inherited) + Shopify-specific code
     }
 }`,
-        note: 'ShopifyConnector එකට connect() එක උරුම වුණා — නැවත ලියන්න ඕන නෑ.',
+        note: 'connect() සහ brandId ShopifyConnector එකට නොමිලේ උරුමයි.',
+      },
+      {
+        filename: 'SuperMethod.java',
+        language: 'java',
+        code: `// super.method() — parent behaviour එක "extend" කරන එක
+public class LoggingConnector extends Connector {
+    public LoggingConnector(String brandId) { super(brandId); }
+
+    @Override
+    public void connect() {
+        System.out.println("[log] connect පටන් ගන්නවා");
+        super.connect();     // parent එකේ මුල් connect() එක call කරනවා
+        System.out.println("[log] connect ඉවරයි");
+    }
+}
+// parent connect() එක කරලා, ඒ වටේ logging එකතු කරනවා (behaviour extend)`,
+        note: 'super.connect() = parent version එක; ඒ වටේ extra logic wrap කරනවා.',
       },
     ],
     mortar:
-      'Mortar එකට connectors 15+ ක් තියෙනවා (Shopify, WooCommerce, Klaviyo...). ඔක්කොම `Connector` base එකෙන් `extends` කරලා connect/auth වගේ පොදු logic reuse කරනවා. අලුත් platform එකක් add කරනකොට parent code එක ආයෙ ලියන්න ඕන නෑ.',
+      'Mortar එකට connectors 15+ ක් තියෙනවා. ඔක්කොම `Connector` base එකෙන් `extends` කරලා connect/auth/brandId වගේ පොදු logic reuse කරනවා — copy-paste නෑ. අලුත් platform එකක් (උදා: TikTok Shop) add කරනකොට, `extends Connector` කරලා platform-specific sync එක විතරක් ලියනවා; connect/auth නොමිලේ. ඒත් inheritance chain එක ගැඹුරු වෙන්න දෙන්නෙ නෑ — behaviours mix කරන්න ඕන තැන් වලට composition (1.2.6) use කරනවා.',
     keyPoints: [
-      '`extends` = single inheritance (Java classes එකට එක parent විතරයි).',
-      '`super()` parent constructor එකට, `super.x()` parent method එකට.',
-      'Inheritance = "IS-A" relationship + code reuse.',
+      '`extends` = single inheritance — Java class එකකට parent එකයි (interfaces කිහිපයක් වුණාට).',
+      'public/protected members උරුම වෙනවා; private + constructors උරුම වෙන්නෙ නෑ.',
+      '`super(...)` = parent constructor; `super.method()` = parent method version.',
+      'Inheritance = "IS-A" relationship — ඇත්තටම IS-A වෙනකොට විතරක් use කරන්න.',
     ],
     pitfalls: [
-      'Deep inheritance chains (5-6 levels) maintain කරන්න අමාරුයි — බොහෝවිට composition හොඳයි.',
-      'Subclass constructor එකේ first line එක implicitly `super()` call කරනවා; parent එකට no-arg constructor නැත්නම් explicitly `super(...)` දෙන්න ඕන.',
+      'නිකම් code reuse එකට inherit කරන්න එපා (fragile design). "IS-A" නැත්නම් composition (1.2.6) හොඳයි.',
+      'Deep inheritance chains (5-6 levels) maintain කරන්න අමාරුයි — parent එක වෙනස් වුනොත් children ගොඩක් කැඩෙනවා.',
+      'Subclass constructor එකේ පළවෙනි line එක implicitly `super()` call කරනවා; parent එකට no-arg constructor නැත්නම් explicitly `super(...)` දෙන්නම ඕන.',
     ],
   },
 
   '1.1.3': {
     summary:
-      'Abstraction කියන්නේ "මොකද කරන්නේ" පෙන්නලා "කොහොමද කරන්නේ" හංගන එක — implementation details සඟවනවා.',
+      'Abstraction = "මොකද කරන්නේ" (what) පෙන්නලා "කොහොමද කරන්නේ" (how) හංගන එක. User ට ඕන essential interface එක විතරක් expose කරලා, ඇතුලේ complexity සඟවනවා.',
     sinhala: [
       {
-        heading: 'Essential details විතරක්',
-        body: 'Abstraction වලින් user ට ඕන complexity එක අඩු කරනවා. Abstract class හෝ interface එකකින් "contract" එකක් define කරලා, ඇත්ත implementation එක concrete class වල හංගනවා. User දන්නෙ `sync()` කියලා method එකක් තියෙනවා කියලා විතරයි — ඇතුලෙ HTTP calls, retries මොනවද කියලා දැනගන්න ඕන නෑ.',
+        heading: 'කතාව: pipeline එකට හැම source එකක්ම එකවගේ පෙනෙන්න ඕන',
+        body: 'Mortar ingestion pipeline එකට customers එන්නේ තැන් ගොඩකින් — Shopify (REST API + pagination + rate limits), CSV upload (file parse + validation), Klaviyo (two-way sync). මේ හැම එකෙන්ම customers ගන්න එක internally ගොඩක් වෙනස්, සංකීර්ණයි. දැන් pipeline code එකට හැම source එකකම internal details දැනගන්න ඕන වුනොත්? code එක අවුල්, tightly coupled. ඕන වෙන්නේ — "මට customers දෙන්න" කියලා අහන්න පුළුවන් එක සරල ක්‍රමයක්, ඇතුලේ මොකද වෙන්නේ කියලා නොදැන. ඒකට තමයි abstraction.',
+      },
+      {
+        heading: 'What vs How',
+        body: 'Abstraction එකේ හරය: contract එකක් (interface/abstract class) එකෙන් "මොනවා කරන්න පුළුවන්ද" කියලා define කරනවා; ඇත්ත "කොහොමද කරන්නේ" concrete classes ඇතුලේ හංගනවා.',
+        points: [
+          'Contract: `DataSource` interface එකේ `fetchCustomers()` — "customers දෙනවා" කියන පොරොන්දුව විතරයි.',
+          'Hidden how: `ShopifyDataSource` ඇතුලේ auth, pagination, rate-limit, retry ඔක්කොම — ඒත් පිටින් නොපෙනේ.',
+          'Caller දන්නේ `fetchCustomers()` කියලා call කරන්න පුළුවන් කියලා විතරයි — details 0ක්.',
+        ],
+      },
+      {
+        heading: 'Abstraction vs Encapsulation (confuse කරන්න එපා)',
+        body: 'දෙක සම්බන්ධයි ඒත් වෙනස්. Abstraction = **design-level** — "implementation එක හංගනවා" (what to show, how to hide — interfaces/abstract classes වලින්). Encapsulation = **implementation-level** — "data එක හංගනවා" (fields private කරලා getters/setters වලින් — 1.1.4). Abstraction "පිටතට මොකද පෙනෙන්නේ" ගැන; encapsulation "data එක safe තියාගන්නේ කොහොමද" ගැන.',
       },
     ],
     analogy:
-      'රිය පදවනකොට steering wheel එක කරකවනවා විතරයි. Engine එක, gears මොනවද කරන්නේ කියලා දැනගන්න ඕන නෑ — ඒ complexity එක abstract කරලා තියෙනවා.',
+      'රිය පදවනකොට steering wheel එක කරකවනවා, brake එක ගහනවා විතරයි (interface). Engine එක combustion කරන හැටි, gearbox වැඩ කරන හැටි (implementation) දැනගන්න ඕන නෑ — ඒ complexity එක abstract කරලා hidden. TV remote එකක බොත්තම් වගේ — signal එක යවන electronics නොදැන use කරන්න පුළුවන්.',
     code: [
       {
         filename: 'DataSource.java',
         language: 'java',
-        code: `// Abstraction: WHAT a data source does, not HOW
+        code: `// ABSTRACTION: contract එක — "මොකද කරන්නේ" විතරයි (how නෑ)
 public interface DataSource {
-    List<Customer> fetchCustomers();  // contract only
-}
-
-// HOW is hidden inside each implementation
+    List<Customer> fetchCustomers();     // customers දෙනවා — details නෑ
+}`,
+        note: 'Interface එක = contract; "customers දෙනවා" කියන පොරොන්දුව විතරයි.',
+      },
+      {
+        filename: 'ShopifyDataSource.java',
+        language: 'java',
+        code: `// "කොහොමද කරන්නේ" — සියලු complexity මෙතන hidden
 public class ShopifyDataSource implements DataSource {
+
     @Override
     public List<Customer> fetchCustomers() {
-        // hidden complexity: auth, pagination, rate-limits, retries...
-        return callShopifyApi();
+        // caller ට මේ complexity එකක්වත් පේන්නෙ නෑ:
+        authenticate();                  // OAuth handshake
+        List<Customer> all = new ArrayList<>();
+        int page = 1;
+        while (hasMore(page)) {           // pagination
+            all.addAll(withRetry(() -> callApi(page)));  // rate-limit + retry
+            page++;
+        }
+        return all;
     }
-    private List<Customer> callShopifyApi() { /* ... */ return List.of(); }
+
+    private void authenticate() { /* hidden */ }
+    private boolean hasMore(int page) { return page <= 3; }
+    private List<Customer> callApi(int page) { return List.of(); }
+    private List<Customer> withRetry(Object task) { return List.of(); }
 }`,
-        note: 'Caller දන්නෙ fetchCustomers() කියලා විතරයි — ඇතුලෙ logic එක hidden.',
+        note: 'auth/pagination/retry ඔක්කොම ඇතුලේ — පිටින් නොපෙනේ.',
+      },
+      {
+        filename: 'PipelineUsesAbstraction.java',
+        language: 'java',
+        code: `// Pipeline එකට source එක Shopify ද CSV ද කියලා දැනගන්න ඕන නෑ!
+public class IngestionPipeline {
+
+    // DataSource abstraction එකට විතරයි depend කරන්නේ (concrete class එකට නෙවෙයි)
+    public void ingest(DataSource source) {
+        List<Customer> customers = source.fetchCustomers();  // how එක නොදැන
+        customers.forEach(this::resolve);
+    }
+}
+
+// ඕන source එකක් pass කරන්න පුළුවන් — pipeline code එක වෙනස් වෙන්නෙ නෑ
+new IngestionPipeline().ingest(new ShopifyDataSource());
+// new IngestionPipeline().ingest(new CsvDataSource());  // එකම විදිහට`,
+        note: 'Pipeline එක abstraction එකට depend කරනවා — concrete details වලට නෙවෙයි.',
       },
     ],
     mortar:
-      'Mortar එකේ ingestion layer එක හැම source එකක්ම `DataSource` abstraction එකක් විදිහට දකිනවා. ඒ නිසා pipeline code එකට Shopify ද CSV upload ද කියලා දැනගන්න ඕන නෑ — හැම එකක්ම customers දෙනවා, ඇතුලේ complexity එක සම්පූර්ණයෙන් hidden.',
+      'Mortar ingestion layer එක හැම source එකක්ම `DataSource` abstraction එකක් විදිහට දකිනවා. ඒ නිසා pipeline code එකට Shopify ද, CSV upload ද, Klaviyo ද කියලා දැනගන්න ඕන නෑ — හැම එකක්ම `fetchCustomers()` වලින් customers දෙනවා, ඇතුලේ complexity සම්පූර්ණයෙන් hidden. අලුත් source එකක් add කරනකොට pipeline එක වෙනස් වෙන්නෙ නෑ — abstraction එකට program කරන නිසා (මේකෙන් Open/Closed principle — 5.1.2 — එනවා).',
     keyPoints: [
-      'Abstraction = complexity hide කරලා essential interface එක විතරක් expose කරන එක.',
-      'Java වල abstract classes සහ interfaces වලින් achieve කරනවා.',
-      'Encapsulation "data hiding"; Abstraction "implementation hiding".',
+      'Abstraction = essential "what" expose කරලා "how" හංගනවා.',
+      'Java වල interfaces + abstract classes වලින් achieve කරනවා.',
+      'Caller abstraction එකට depend කරනවා — concrete implementation එකට නෙවෙයි (loose coupling).',
+      'Abstraction = implementation hiding (design); Encapsulation = data hiding (fields).',
+    ],
+    pitfalls: [
+      'Abstraction "leaky" වෙන්න දෙන්න එපා — internal details (page numbers, HTTP status) interface එකෙන් පිටතට කාන්දු වුනොත් abstraction එකේ තේරුමක් නෑ.',
+      'ඕනවට වඩා abstraction layers දාන්න එපා (over-engineering — KISS 5.2.2) — ඇත්තටම ඕන තැන් වලට විතරයි.',
     ],
   },
 
   '1.1.4': {
     summary:
-      'Encapsulation කියන්නේ data (fields) private කරලා, ඒවාට access කරන්නේ controlled methods (getters/setters) හරහා විතරක් වීම.',
+      'Encapsulation = data (fields) `private` කරලා, ඒවාට access කරන්නේ controlled public methods (getters/setters) හරහා විතරක් වීම. Data එක "capsule" එකක් ඇතුලේ safe තියාගන්නවා.',
     sinhala: [
       {
-        heading: 'Data hiding',
-        body: 'Fields `private` කරලා, පිටින් කෙලින්ම access කරන්න බෑ. ඒ වෙනුවට public methods හරහා access දෙනවා. මේකෙන් validation දාන්න, invariants protect කරන්න, future එකේ internal representation එක වෙනස් කරන්නත් පුළුවන් — outside code එකට බලපෑමක් නැතුව.',
+        heading: 'කතාව: totalSpend එක ඕන කෙනෙක්ට වෙනස් කරන්න පුළුවන් නම්?',
+        body: 'හිතන්න `Customer` class එකේ `totalSpend` field එක `public`. දැන් code එකේ ඕන තැනකින් `customer.totalSpend = -5000;` වගේ දාන්න පුළුවන් — negative spend! නැත්නම් අහම්බෙන් reset වෙන්න පුළුවන්. Data එකේ "නීති" (spend එකක් negative වෙන්න බෑ, email එකේ @ තියෙන්නම ඕන) enforce කරන්න ක්‍රමයක් නෑ. ඕන වෙන්නේ — data එකට කෙලින්ම අත දාන්න දෙන්නෙ නැතුව, "දොරටුපාලයෙක්" (method) හරහා විතරක් access දෙන එක. ඒකට තමයි encapsulation.',
+      },
+      {
+        heading: 'කොහොමද කරන්නේ (steps)',
+        body: 'Encapsulation එකක් හදන්නේ මෙහෙමයි:',
+        points: [
+          'Fields `private` කරන්න — පිටින් කෙලින්ම access කරන්න බෑ.',
+          'Read කරන්න ඕන නම් `public` getter එකක් දෙන්න (`getTotalSpend()`).',
+          'Write කරන්න ඕන නම් `public` setter/method එකක් දෙන්න — ඒකේ validation දාන්න.',
+          'ඒ නිසා data එකේ "නීති" (invariants) හැමවිටම protect වෙනවා — වැරදි value එකක් කවදාවත් set වෙන්නෙ නෑ.',
+        ],
+      },
+      {
+        heading: 'ඇයි මේක වටිනවා',
+        body: 'Encapsulation එකෙන් ලැබෙන වාසි: (බලන්න code එකේ). Validation එක තැනක; invariants safe; internal representation එක future එකේ වෙනස් කරන්න පුළුවන් (fields කොහොම store කරනවද කියන එක වෙනස් කලාට, public methods එකම නම් outside code කැඩෙන්නෙ නෑ). මේකෙන් loose coupling + maintainability.',
       },
     ],
     analogy:
-      'ATM එකක් වගේ. සල්ලි (data) machine එක ඇතුලේ safe. ඔයාට කරන්න පුළුවන් approved operations (withdraw/deposit) විතරයි — කෙලින්ම cash box එකට අත දාන්න බෑ.',
+      'ATM එකක් වගේ. සල්ලි (data) machine එක ඇතුලේ safe තියෙනවා. ඔයාට කරන්න පුළුවන් approved operations (withdraw/deposit) විතරයි — කෙලින්ම cash box එකට අත දාන්න බෑ. ATM එක නීති check කරනවා (balance ඇතිද, PIN හරිද) — encapsulation එකේ setter validation වගේ.',
     code: [
       {
         filename: 'CustomerProfile.java',
         language: 'java',
         code: `public class CustomerProfile {
-    private String email;        // hidden
-    private boolean emailValid;  // hidden
+    // fields private -> පිටින් කෙලින්ම අත දාන්න බෑ (hidden)
+    private String email;
+    private double totalSpend;
+    private boolean emailValid;
 
-    public String getEmail() { return email; }
+    // READ: getter — safe read access
+    public String getEmail()       { return email; }
+    public double getTotalSpend()  { return totalSpend; }
 
-    // setter validates -> invariant protected
+    // WRITE: setter — validation එකෙන් invariant protect කරනවා
     public void setEmail(String email) {
         if (email == null || !email.contains("@")) {
-            throw new IllegalArgumentException("Invalid email");
+            throw new IllegalArgumentException("email එක වැරදියි");  // නීතිය enforce
         }
         this.email = email;
         this.emailValid = true;
     }
 
-    public boolean isEmailValid() { return emailValid; }
+    // controlled mutation — negative spend කවදාවත් වෙන්නෙ නෑ
+    public void addSpend(double amount) {
+        if (amount < 0) throw new IllegalArgumentException("spend negative වෙන්න බෑ");
+        this.totalSpend += amount;
+    }
 }`,
-        note: 'email set කරන්න පුළුවන් validation එකෙන් pass වුනොත් විතරයි.',
+        note: 'email/spend private; වෙනස් කරන්න පුළුවන් validation pass වුනොත් විතරයි.',
+      },
+      {
+        filename: 'WhyItMatters.java',
+        language: 'java',
+        code: `CustomerProfile c = new CustomerProfile();
+
+// c.totalSpend = -5000;          //  COMPILE ERROR — private, කෙලින්ම බෑ
+// c.addSpend(-5000);             //  Runtime exception — validation අල්ලනවා
+
+c.setEmail("alice@shop.com");     // ✅ valid
+c.addSpend(120.0);                // ✅ valid
+System.out.println(c.getTotalSpend()); // 120.0
+
+// c.setEmail("not-an-email");    //  IllegalArgumentException — invariant safe`,
+        note: 'Invalid state එකක් object එකට කවදාවත් ඇතුල් වෙන්නෙ නෑ.',
       },
     ],
     mortar:
-      'Mortar customer records වල email, phone වගේ sensitive fields encrypted. Encapsulation නිසා ඒවා private; getters වලින් access කරනකොට role permission එකයි decryption එකයි enforce කරන්න පුළුවන්. Invalid email එකක් කවදාවත් set වෙන්නෙ නෑ.',
+      'Mortar customer records වල email, phone වගේ sensitive fields `private` + encrypted. Encapsulation නිසා ඒවාට කෙලින්ම access කරන්න බෑ; getters හරහා access කරනකොට role-permission check එකයි decryption එකයි enforce කරන්න පුළුවන් (field-level encryption — PROJECT_IDEA 10.5). තවත් — invalid email එකක්, negative spend එකක් object එකට කවදාවත් ඇතුල් වෙන්නෙ නෑ, ඒ නිසා data quality + security දෙකම protected.',
     keyPoints: [
-      'Fields `private`, access `public` methods හරහා.',
-      'Validation + invariants protect කරන්න පුළුවන්.',
-      'Internal implementation එක නිදහසේ වෙනස් කරන්න පුළුවන් (loose coupling).',
+      'Fields `private`; access `public` getter/setter/methods හරහා විතරයි.',
+      'Setters වල validation → invariants (නීති) හැමවිටම protected.',
+      'Internal representation නිදහසේ වෙනස් කරන්න පුළුවන් (public API එකම නම් outside code safe).',
+      'Security: sensitive fields hide කරලා permission/encryption enforce කරන්න.',
     ],
     pitfalls: [
-      'Getter/setter දාලා field එකම expose කරනවා නම් encapsulation එකේ තේරුමක් නෑ — logic/validation දාන්න.',
+      'Getter/setter දාලා field එකම plain expose කරනවා නම් (validation/logic නැතුව) encapsulation එකේ ලොකු වටිනාකමක් නෑ — ඇත්තටම protect කරන්න ඕන දේ protect කරන්න.',
+      'Getter එකකින් mutable object එකක් (List වගේ) කෙලින්ම return කලොත், caller ට ඇතුළ වෙනස් කරන්න පුළුවන් — copy එකක් return කරන්න (defensive copy).',
     ],
   },
 
   '1.1.5.1': {
     summary:
-      'Method Overloading = එකම නමින් methods කිහිපයක්, parameters වෙනස්. Compile-time (static) polymorphism.',
+      'Method Overloading = එකම class එකේ, එකම නමින් methods කිහිපයක් — parameters (count/type/order) වෙනස් නම්. Compiler compile-time එකේදීම හරි එක තෝරනවා (static polymorphism).',
     sinhala: [
       {
-        heading: 'Same name, different signature',
-        body: 'එකම class එකේ එකම method name එකෙන් methods කිහිපයක් ලියන්න පුළුවන් — parameter list එක (count/type/order) වෙනස් නම්. Compiler compile time එකේදීම කුමන version එකද call වෙන්නෙ කියලා තීරණය කරනවා (static binding). Return type එක විතරක් වෙනස් කරලා overload කරන්න බෑ.',
+        heading: 'කතාව: segment builder එකට clean API එකක්',
+        body: 'Mortar segment builder එකට filters දාන්න ඕන — සමහර වෙලාවට "country = LK" වගේ attribute filter, සමහර වෙලාවට "age 18 සිට 35" වගේ range filter, සමහර වෙලාවට "churn status = ACTIVE" වගේ predictive filter. දැන් developer ට මතක තියාගන්න methods 3ක් වෙන වෙන නම් වලින් (`addAttributeFilter`, `addRangeFilter`, `addChurnFilter`) දුන්නොත් API එක අවුල්. ඒ වෙනුවට — එකම නම `addFilter` use කරලා, arguments අනුව හරි එක automatic තෝරන්න පුළුවන් නම්? ඒකට තමයි overloading.',
+      },
+      {
+        heading: 'Overloading වැඩ කරන විදිහ',
+        body: 'එකම method name එකෙන් methods කිහිපයක් ලියන්න පුළුවන් — **parameter list එක වෙනස් නම්**. Parameter list වෙනස් වෙන්න පුළුවන් ක්‍රම:',
+        points: [
+          'Parameters ගාන වෙනස් — `addFilter(String)` vs `addFilter(String, String)`.',
+          'Parameter types වෙනස් — `addFilter(String)` vs `addFilter(ChurnStatus)`.',
+          'Parameter order වෙනස් — `addFilter(String, int)` vs `addFilter(int, String)`.',
+          'රීතිය: return type එක **විතරක්** වෙනස් කරලා overload කරන්න බෑ (compiler confused වෙනවා).',
+        ],
+      },
+      {
+        heading: 'Compile-time (static) binding',
+        body: 'වැදගත්ම කරුණ: කුමන `addFilter` version එකද call වෙන්නේ කියලා **compiler** compile time එකේදීම තීරණය කරනවා — arguments බලලා (static binding). Runtime එකේ තීරණයක් නෑ. ඒ නිසා මේකට "compile-time polymorphism" කියනවා (overriding — 1.1.5.2 — runtime එකේ තීරණය වෙනවා; ඒක වෙනස).',
       },
     ],
     analogy:
-      '"add" කියන වචනෙ වගේ — "සල්ලි add කරනවා", "list එකට item add කරනවා". එකම වචනෙ, context (arguments) අනුව තේරුම වෙනස්.',
+      '"open" කියන වචනෙ වගේ — "දොර open කරන්න", "bank account එකක් open කරන්න", "file එකක් open කරන්න". එකම වචනෙ, ඒත් context (arguments — දොර ද, account ද, file ද) අනුව තේරුම වෙනස්. ඔයා කියන දේ අනුව අනිත් කෙනා (compiler) හරි අර්ථය තෝරගන්නවා.',
     code: [
       {
         filename: 'AudienceBuilder.java',
         language: 'java',
         code: `public class AudienceBuilder {
-    // overloaded: same name, different parameters
-    public void addFilter(String attribute, String value) { /* attribute rule */ }
 
-    public void addFilter(String attribute, int min, int max) { /* range rule */ }
+    // overload 1: attribute filter (String, String)
+    public void addFilter(String attribute, String value) {
+        System.out.println(attribute + " = " + value);
+    }
 
-    public void addFilter(ChurnStatus status) { /* predictive rule */ }
-}
+    // overload 2: range filter (String, int, int) — parameters ගාන වෙනස්
+    public void addFilter(String attribute, int min, int max) {
+        System.out.println(attribute + " between " + min + " and " + max);
+    }
 
-// compiler picks the right one at compile time
-new AudienceBuilder().addFilter("country", "LK");
-new AudienceBuilder().addFilter("age", 18, 35);`,
-        note: 'තුනම "addFilter" — ඒත් arguments අනුව compiler correct එක තෝරනවා.',
+    // overload 3: predictive filter (ChurnStatus) — type වෙනස්
+    public void addFilter(ChurnStatus status) {
+        System.out.println("churn = " + status);
+    }
+}`,
+        note: 'තුනම නම "addFilter" — ඒත් parameter list තුනක්.',
+      },
+      {
+        filename: 'CompilerPicks.java',
+        language: 'java',
+        code: `AudienceBuilder b = new AudienceBuilder();
+
+// compiler arguments බලලා compile-time එකේදීම හරි version එක තෝරනවා:
+b.addFilter("country", "LK");          // -> overload 1 (String, String)
+b.addFilter("age", 18, 35);            // -> overload 2 (String, int, int)
+b.addFilter(ChurnStatus.ACTIVE);       // -> overload 3 (ChurnStatus)`,
+        note: 'Arguments අනුව compiler correct method එක select කරනවා (static binding).',
+      },
+      {
+        filename: 'IllegalOverload.java',
+        language: 'java',
+        code: `class Bad {
+    int  score(String id) { return 1; }
+    // String score(String id) { return "x"; }  //  COMPILE ERROR!
+    // return type එක විතරක් වෙනස් — parameter list එකම -> overload නෙවෙයි
+}`,
+        note: 'Return type එක විතරක් වෙනස් කලාට overload වෙන්නෙ නෑ.',
       },
     ],
     mortar:
-      'Mortar visual segment builder එකේ conditions වර්ග තුනක් තියෙනවා: attribute, event, predictive. `addFilter(...)` එකම නමින් overload කරලා, developer ට clean API එකක් දෙනවා — argument අනුව හරි rule එක හැදෙනවා.',
+      'Mortar visual segment builder එකේ condition වර්ග තුනක් තියෙනවා — attribute, event, predictive. `addFilter(...)` එකම නමින් overload කරලා, developer ට එක clean, intuitive API එකක් දෙනවා: argument එක අනුව හරි rule එකම හැදෙනවා, methods 3ක නම් මතක තියාගන්න ඕන නෑ. Java standard library එකේ `println(int)`, `println(String)`, `println(boolean)` වගේම.',
     keyPoints: [
-      'Overloading = same method name + different parameter list.',
-      'Compile-time / static binding.',
+      'Overloading = same name + different parameter list (count/type/order).',
+      'Compiler compile-time එකේදී තෝරනවා → compile-time / static polymorphism.',
       'Return type එක විතරක් වෙනස් කරලා overload කරන්න බෑ.',
+      'API එකක් clean + intuitive කරන්න පාවිච්චි කරනවා.',
+    ],
+    pitfalls: [
+      'Overloading (compile-time, parameters වෙනස්) සහ Overriding (run-time, signature සමානයි — 1.1.5.2) එකතු කරන්න එපා.',
+      'Autoboxing + overloading එකට ආවම ambiguity එන්න පුළුවන් (`method(int)` vs `method(Integer)`) — compiler වඩාත්ම specific එක තෝරනවා.',
     ],
   },
 
   '1.1.5.2': {
     summary:
-      'Method Overriding = subclass එකක් parent method එකේම signature එකෙන් අලුත් implementation එකක් දෙන එක. Run-time (dynamic) polymorphism.',
+      'Method Overriding = subclass එකක් parent එකේ method එකේම signature එකෙන් (same name + parameters) අලුත් implementation එකක් දෙන එක. Runtime එකේදී object එකේ ඇත්ත type එක අනුව හරි version එක run වෙනවා (run-time polymorphism).',
     sinhala: [
       {
-        heading: 'Same signature, new behaviour',
-        body: 'Subclass එකක් parent එකේ method එකක්ම (same name + parameters) නැවත define කරනකොට, ඒක override වෙනවා. Runtime එකේදී object එකේ actual type එක අනුව කුමන version එකද run වෙන්නෙ කියලා decide වෙනවා (dynamic dispatch). `@Override` annotation එකෙන් compiler ට verify කරන්න කියනවා.',
+        heading: 'කතාව: scheduler එකට connector type එක දැනගන්න ඕන නෑ',
+        body: 'Mortar sync scheduler එකට connectors ලැයිස්තුවක් තියෙනවා — Shopify, Klaviyo, WooCommerce. හැම එකකම "sync කරන්න" කියන්න ඕන. ඒත් Shopify sync කරන විදිහයි Klaviyo sync කරන විදිහයි සම්පූර්ණයෙන් වෙනස්. දැන් scheduler එකේ `if (connector instanceof Shopify) {...} else if (...) {...}` වගේ ලිව්වොත්? connectors 15ක් එද්දී මේ if-ladder එක බියකරුයි, අලුත් එකක් add කරනකොට හැම තැනම edit කරන්න වෙනවා. ඕන වෙන්නේ — හැම එකකටම `sync()` කියලා call කරලා, හරි implementation එක automatic run වෙන එක. ඒකට තමයි overriding.',
+      },
+      {
+        heading: 'Overriding වැඩ කරන විදිහ',
+        body: 'Subclass එකක් parent එකේ method එකක්ම — **same name + same parameters (signature)** — නැවත define කරනකොට, ඒක "override" වෙනවා. පියවර:',
+        points: [
+          'Parent (හෝ interface/abstract) එකේ method එකක් තියෙනවා — `sync()` වගේ.',
+          'Subclass එක එකම signature එකෙන් තමන්ගේම body එකක් ලියනවා (`@Override` දාන්න).',
+          'Runtime එකේදී — reference type එක නෙවෙයි, **object එකේ ඇත්ත type එක** අනුව හරි version එක run වෙනවා (dynamic dispatch).',
+          'ඒ නිසා `Connector c = new KlaviyoConnector(); c.sync();` කරාම Klaviyo ගේ sync එක run වෙනවා.',
+        ],
+      },
+      {
+        heading: 'මේකෙන් එන බලය: polymorphism',
+        body: 'Overriding නිසා — එකම `Connector` type එක හරහා, වෙන වෙන behaviours trigger කරන්න පුළුවන් (object එකට අනුව). Scheduler එකට `List<Connector>` එකක් loop කරලා `sync()` call කරන්න පුළුවන්, connector type එක දැනගන්නෙ නැතුව. if-ladders නෑ. මේකයි OOP එකේ ලොකුම බලය — "program to the abstraction, behaviour varies at runtime".',
       },
     ],
     analogy:
-      'හැම connector එකකටම "sync()" කරන්න පුළුවන්, ඒත් Shopify sync කරන විදිහයි Klaviyo sync කරන විදිහයි වෙනස්. එකම method name, වෙනස් behaviour.',
+      'Manager කෙනෙක් team එකට "report එක හදන්න" කියනවා (එකම instruction). Developer report එක code විදිහට හදනවා, designer mockup විදිහට හදනවා — එකම instruction, ඒත් කවුද කරන්නේ කියන එක අනුව වෙනස් result. Manager ට කවුද මොනවද කරන්නේ කියලා දැනගන්න ඕන නෑ.',
     code: [
       {
-        filename: 'Connectors.java',
+        filename: 'Overriding.java',
         language: 'java',
         code: `abstract class Connector {
-    abstract void sync();
+    abstract void sync();               // parent contract
 }
 
 class ShopifyConnector extends Connector {
-    @Override void sync() { System.out.println("Sync via Shopify REST API"); }
+    @Override                            // annotation -> compiler verify කරනවා
+    void sync() {
+        System.out.println("Shopify REST API එකෙන් sync");
+    }
 }
 
 class KlaviyoConnector extends Connector {
-    @Override void sync() { System.out.println("Two-way sync via Klaviyo"); }
-}
-
-// run-time picks the correct sync()
+    @Override
+    void sync() {
+        System.out.println("Klaviyo two-way sync");   // වෙනස් behaviour, එකම signature
+    }
+}`,
+        note: 'දෙකම sync() — signature එකයි, body වෙනස් (override).',
+      },
+      {
+        filename: 'DynamicDispatch.java',
+        language: 'java',
+        code: `// reference type එක Connector වුණත්...
 Connector c = new KlaviyoConnector();
-c.sync(); // -> "Two-way sync via Klaviyo"`,
-        note: 'Reference type එක Connector වුනත්, runtime එකේ actual object එකේ sync() එක call වෙනවා.',
+c.sync();  // -> "Klaviyo two-way sync" (object එකේ ඇත්ත type එක අනුව!)
+
+// polymorphism: scheduler එකට type එක දැනගන්න ඕන නෑ
+List<Connector> connectors = List.of(
+    new ShopifyConnector(), new KlaviyoConnector());
+
+for (Connector conn : connectors) {
+    conn.sync();   // හැම එකකම හරි sync() එක runtime එකේ automatic run වෙනවා
+}
+// -> Shopify REST API එකෙන් sync
+// -> Klaviyo two-way sync`,
+        note: 'Runtime එකේ object එකේ actual type එක අනුව හරි sync() එක call වෙනවා (dynamic dispatch).',
       },
     ],
     mortar:
-      'Mortar sync scheduler එක `List<Connector>` එකක් loop කරලා හැම එකකම `sync()` call කරනවා. Overriding නිසා scheduler එකට connector type එක දැනගන්න ඕන නෑ — හරි implementation එක runtime එකේ automatically run වෙනවා.',
+      'Mortar sync scheduler එක `List<Connector>` එකක් loop කරලා හැම එකකම `sync()` call කරනවා — connector type එක දැනගන්නෙ නැතුව. Overriding + dynamic dispatch නිසා හරි implementation එක (Shopify/Klaviyo/Woo) runtime එකේ automatic run වෙනවා. අලුත් connector එකක් add කරනකොට scheduler code එක වෙනස් වෙන්නෙම නෑ — `sync()` override කරන අලුත් class එකක් දැම්මම ඇති (Open/Closed — 5.1.2).',
     keyPoints: [
-      'Overriding = same signature, subclass එකේ අලුත් implementation.',
-      'Run-time / dynamic dispatch.',
-      '`@Override` දාන්න — typos compile-time එකේ අල්ලනවා.',
+      'Overriding = same signature, subclass එකේ අලුත් implementation (`@Override`).',
+      'Runtime එකේ object එකේ ඇත්ත type එක අනුව තෝරනවා → run-time / dynamic polymorphism.',
+      '`@Override` හැමවිටම දාන්න — typos/signature වැරදි compile-time එකේ අල්ලනවා.',
+      'Polymorphism → if-ladders නැතුව, type එකට depend නොවී behaviour vary කරන්න පුළුවන්.',
     ],
     pitfalls: [
-      'Overriding සහ Overloading confuse කරන්න එපා: overload = compile-time (parameters වෙනස්), override = run-time (signature සමානයි).',
-      '`private`/`static`/`final` methods override කරන්න බෑ.',
+      'Overriding (run-time, signature සමානයි) සහ Overloading (compile-time, parameters වෙනස් — 1.1.5.1) confuse කරන්න එපා.',
+      '`private`, `static`, `final` methods override කරන්න බෑ (`static` "hide" වෙනවා, override නෙවෙයි).',
+      'Override එකේ access එක අඩු කරන්න බෑ (parent `public` නම් child `private` කරන්න බෑ); return type covariant වෙන්න පුළුවන්.',
     ],
   },
 
