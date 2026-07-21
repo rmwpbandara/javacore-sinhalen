@@ -806,107 +806,233 @@ for (String c : connectors) {
 
   '2.3.1': {
     summary:
-      'Generics + bounds: `<T extends Number>` (upper bound), `<T super Integer>` — type-safe reusable code.',
+      'Generics = classes/methods types parameterize කරන එක (`List<Customer>`) — compile-time type safety + reuse. Bounded type parameters (`<T extends Number>`) එකෙන් T මත මොනවා කරන්න පුළුවන්ද කියලා limit කරනවා.',
     sinhala: [
       {
-        heading: 'Bounded type parameters',
-        body: 'Generics වලින් compile-time type safety + reuse දෙනවා. `<T extends Number>` කියන්නේ T එක Number හෝ subclass එකක් වෙන්නම ඕන — ඒ නිසා T මත Number methods call කරන්න පුළුවන්. `extends` = upper bound (this type or below), `super` = lower bound (this type or above).',
+        heading: 'කතාව: type safety නැති කාලේ',
+        body: 'පරණ Java (generics-ට කලින්) වල `List` එකකට ඕන object එකක් දාන්න පුළුවන් — String, Integer, Customer මිශ්‍රව! ගන්නකොට `(Customer) list.get(0)` කියලා cast කරන්නම ඕන, වැරදුනොත් runtime `ClassCastException`. Generics මේක fix කරනවා — `List<Customer>` කියලා type එක කලින්ම කියනවා. දැන් Customer නොවන දෙයක් දාන්න **compiler එකෙන්ම** බෑ, ගන්නකොට cast ඕන නෑ. Bugs compile-time එකේම අල්ලනවා.',
+      },
+      {
+        heading: 'Bounded types: T ට boundary එකක්',
+        body: 'සමහර වෙලාවට T ඕන දෙයක් වෙන්න දෙන්න බෑ — T මත specific methods call කරන්න ඕන. Bounds:',
+        points: [
+          '`<T extends Number>` — T එක Number හෝ subclass එකක් වෙන්නම ඕන (upper bound). ඒ නිසා T මත `doubleValue()` වගේ Number methods call කරන්න පුළුවන්.',
+          '`extends` = upper bound (this type or **below** in hierarchy).',
+          '`super` = lower bound (this type or **above**) — wildcards එක්ක (2.3.2).',
+          'Multiple bounds: `<T extends Number & Comparable<T>>` — දෙකම satisfy කරන්නම ඕන.',
+        ],
       },
     ],
     analogy:
-      '"Number වර්ගයේ දෙයක් විතරයි accept කරන්නේ" කියන bouncer කෙනෙක් වගේ — type එකට boundary එකක්.',
+      '`List<Customer>` = "Customers විතරයි දාන්න පුළුවන් box එකක්" — labelled container (වැරදි දේවල් දාන්න බෑ). `<T extends Number>` = "Number වර්ගයේ දේවල් විතරයි accept කරන bouncer" — type එකට boundary එකක්.',
     code: [
       {
-        filename: 'Bounds.java',
+        filename: 'WhyGenerics.java',
         language: 'java',
-        code: `// T is guaranteed to be a Number -> can call doubleValue()
+        code: `// generics නැතුව — unsafe, cast ඕන
+List raw = new ArrayList();
+raw.add("string");
+raw.add(42);                       // මොනවා හරි දාන්න පුළුවන් (bug එකක්)
+Customer c = (Customer) raw.get(0);  //  ClassCastException runtime එකේ!
+
+// generics එක්ක — compile-time safe, cast නෑ
+List<Customer> customers = new ArrayList<>();
+customers.add(customer);
+// customers.add("string");        //  COMPILE ERROR — type safe
+Customer safe = customers.get(0);   // cast ඕන නෑ`,
+        note: 'Generics = compile-time type safety + cast නැති clean code.',
+      },
+      {
+        filename: 'BoundedType.java',
+        language: 'java',
+        code: `// T guaranteed Number -> T මත doubleValue() call කරන්න පුළුවන්
 static <T extends Number> double sum(List<T> nums) {
     double total = 0;
-    for (T n : nums) total += n.doubleValue();
+    for (T n : nums) {
+        total += n.doubleValue();   // Number method — bound නිසා safe
+    }
     return total;
 }
 
-sum(List.of(1, 2, 3));        // Integer
-sum(List.of(1.5, 2.5));       // Double`,
-        note: 'extends Number නිසා doubleValue() safe.',
+sum(List.of(1, 2, 3));         // Integer (Number subclass) ✅
+sum(List.of(1.5, 2.5));        // Double ✅
+// sum(List.of("a", "b"));     //  String Number නෙවෙයි — compile error`,
+        note: 'extends Number නිසා T මත Number methods safe.',
+      },
+      {
+        filename: 'GenericClass.java',
+        language: 'java',
+        code: `// generic class — ඕන type එකකට reusable
+class Box<T> {
+    private T value;
+    void set(T value) { this.value = value; }
+    T get() { return value; }
+}
+
+Box<Customer> cb = new Box<>();
+cb.set(customer);
+Customer c = cb.get();    // type-safe, cast නෑ`,
+        note: 'Generic class → එකම code, type-safe, ඕන type එකකට.',
       },
     ],
     mortar:
-      'Mortar metrics aggregation utilities (`sum`, `average`) `<T extends Number>` bounded generics වලින් — Integer order-counts, Double spend එකම code එකෙන් type-safe විදිහට process කරනවා.',
+      'Mortar generic `Repository<T>` (7.4.5), metrics aggregation utilities (`sum`, `average`) `<T extends Number>` bounded generics වලින් — Integer order-counts, Double spend එකම code එකෙන් type-safe process කරනවා. Generic DTOs, response wrappers (`ApiResponse<T>`) — code reuse + compile-time safety. Runtime ClassCastException surprises නෑ.',
     keyPoints: [
-      '`extends` = upper bound; `super` = lower bound.',
-      'Bounded T මත ඒ type එකේ methods call කරන්න පුළුවන්.',
-      'Compile-time type safety + code reuse.',
+      'Generics = compile-time type safety + reuse (`List<Customer>`).',
+      '`<T extends X>` = upper bound → X ගේ methods T මත call කරන්න පුළුවන්.',
+      '`extends` = upper bound; `super` = lower bound (wildcards).',
+      'Casts නැති clean code + runtime ClassCastException වළක්වයි.',
+    ],
+    pitfalls: [
+      'Raw types (`List` generics නැතුව) use කරන එක type safety නැති කරනවා — හැමවිටම `List<X>`.',
+      'Primitives generics වල දාන්න බෑ (`List<int>` බෑ) — wrappers (`List<Integer>`) ඕන.',
     ],
   },
 
   '2.3.2': {
     summary:
-      'Wildcards: `<?>` unknown, `<? extends T>` producer (read), `<? super T>` consumer (write). PECS.',
+      'Wildcards (`?`): `<?>` = unknown type; `<? extends T>` = producer (T හෝ subtype — read); `<? super T>` = consumer (T හෝ supertype — write). මතක තියාගන්න PECS: **Producer Extends, Consumer Super**.',
     sinhala: [
       {
-        heading: 'PECS rule',
-        body: '"Producer Extends, Consumer Super". List එකකින් values read කරනවා නම් (producer) `<? extends T>`. List එකට values write කරනවා නම් (consumer) `<? super T>`. `<?>` = unbounded, type එක නොදන්නවා (read as Object). මේකෙන් flexible, safe APIs හදනවා.',
+        heading: 'කතාව: List<VIP> එකක් List<Customer> method එකකට යවන්න බෑ?!',
+        body: 'VIP, Committed කියන්නේ Customer ගේ subtypes. ඔයාට `List<VIP>` එකක් තියෙනවා, `void process(List<Customer> list)` method එකකට යවන්න ඕන. ඒත් compile error! ඇයි? `List<VIP>` සහ `List<Customer>` generics වල **related නෑ** (VIP, Customer related වුනත්). මේ අවුල විසඳන්නේ wildcards (`?`) වලින් — flexible generic parameters.',
+      },
+      {
+        heading: 'Wildcard වර්ග 3 + PECS',
+        body: 'Wildcards 3ක්, කවදා මොකක්ද කියලා PECS rule එකෙන් තීරණය කරනවා:',
+        points: [
+          '`<?>` — unbounded, type එක නොදන්නවා (elements Object විදිහට read කරන්න විතරයි පුළුවන්).',
+          '`<? extends T>` — T හෝ subtype. List එකකින් values **read** කරනවා නම් (Producer). "Producer Extends".',
+          '`<? super T>` — T හෝ supertype. List එකට values **write** කරනවා නම් (Consumer). "Consumer Super".',
+          'PECS: **P**roducer **E**xtends, **C**onsumer **S**uper — read නම් extends, write නම් super.',
+        ],
       },
     ],
     analogy:
-      '`? extends` = "මොකක් හරි Number එකක් දෙන box එකක්" (ගන්න පුළුවන්). `? super` = "Number එකක් දාන්න පුළුවන් box එකක්" (දාන්න පුළුවන්).',
+      '`? extends Customer` = "මොකක් හරි Customer එකක් (VIP/Committed) දෙන box එකක්" — ගන්න (read) පුළුවන්, ඒත් දාන්න බෑ (මොන subtype ද කියලා නොදන්නා නිසා). `? super VIP` = "VIP එකක් දාන්න පුළුවන් box එකක්" — දාන්න (write) පුළුවන්.',
     code: [
       {
-        filename: 'Wildcards.java',
+        filename: 'ProducerExtends.java',
         language: 'java',
-        code: `// producer: read Ts out
-static double total(List<? extends Number> nums) {
-    double t = 0; for (Number n : nums) t += n.doubleValue(); return t;
+        code: `// PRODUCER: list එකෙන් values READ කරනවා -> ? extends
+static double totalSpend(List<? extends Customer> customers) {
+    double total = 0;
+    for (Customer c : customers) {       // read as Customer — safe
+        total += c.getTotalSpend();
+    }
+    return total;
 }
 
-// consumer: write Ts in
-static void addDefaults(List<? super Integer> sink) {
-    sink.add(0); sink.add(1);
-}`,
-        note: 'Read → extends; Write → super (PECS).',
+// දැන් Customer subtypes ඔක්කොම pass කරන්න පුළුවන්:
+totalSpend(new ArrayList<VIP>());        // ✅
+totalSpend(new ArrayList<Committed>());  // ✅
+totalSpend(new ArrayList<Customer>());   // ✅`,
+        note: 'Read (produce) කරනවා → `? extends` → subtypes ඔක්කොම accept.',
+      },
+      {
+        filename: 'ConsumerSuper.java',
+        language: 'java',
+        code: `// CONSUMER: list එකට values WRITE කරනවා -> ? super
+static void addVips(List<? super VIP> sink) {
+    sink.add(new VIP());        // write — safe (VIP හෝ supertype list එකක්)
+    sink.add(new VIP());
+}
+
+// VIP හෝ supertype lists accept:
+addVips(new ArrayList<VIP>());       // ✅
+addVips(new ArrayList<Customer>());  // ✅ (VIP is-a Customer)
+addVips(new ArrayList<Object>());    // ✅`,
+        note: 'Write (consume) කරනවා → `? super` → supertypes accept.',
       },
     ],
     mortar:
-      'Mortar generic export/aggregation helpers wildcards වලින් flexible වෙනවා — `List<VIP>`, `List<Committed>` (Customer subtypes) ඔක්කොම එකම `List<? extends Customer>` method එකකට pass කරන්න පුළුවන්.',
+      'Mortar generic export/aggregation helpers wildcards වලින් flexible: `totalSpend(List<? extends Customer>)` එකට `List<VIP>`, `List<Committed>` (segment subtypes — 3.2.6) ඔක්කොම pass කරන්න පුළුවන්. Audience-building "sink" APIs `List<? super VIP>` — customers add කරන්න. PECS rule එකෙන් flexible, safe generic APIs.',
     keyPoints: [
-      'PECS: Producer Extends, Consumer Super.',
-      '`<?>` unbounded = read as Object only.',
-      'Wildcards = flexible generic APIs.',
+      'PECS: Producer Extends (read), Consumer Super (write).',
+      '`<? extends T>` = T හෝ subtype (read); `<? super T>` = T හෝ supertype (write).',
+      '`<?>` = unbounded (Object විදිහට read only).',
+      'Wildcards = flexible generic method APIs.',
+    ],
+    pitfalls: [
+      '`<? extends T>` list එකකට `add()` කරන්න බෑ (මොන subtype ද කියලා නොදන්නා නිසා) — read only.',
+      '`<? super T>` list එකකින් read කරාම Object විතරයි ලැබෙන්නේ (specific type නොදන්නා නිසා).',
     ],
   },
 
   '2.3.3': {
     summary:
-      'Type erasure = generics compile-time විතරයි; runtime එකේ type info මැකෙනවා (backward compatibility).',
+      'Type erasure = generics compile-time එකේ විතරයි; bytecode එකට යනකොට type parameters "erase" වෙනවා (`List<String>` → `List`). ඒ නිසා runtime එකේ generic type info නෑ (backward compatibility නිසා).',
     sinhala: [
       {
-        heading: 'Runtime එකේ generics නෑ',
-        body: 'Compiler generics check කරලා, bytecode එකට generate කරනකොට type parameters "erase" කරනවා (`List<String>` → `List`). ඒ නිසා runtime එකේ `List<String>` සහ `List<Integer>` එකම class. `new T()`, `T[].class`, `instanceof List<String>` වගේ දේවල් බෑ. Bridge methods + casts compiler එකෙන් දානවා.',
+        heading: 'කතාව: generics runtime එකේ "නැති" වෙනවා',
+        body: 'Generics 2004 (Java 5) දී ආවා — ඒත් පරණ code එක්ක compatible වෙන්නම ඕන වුණා. ඒ නිසා Java designers trick එකක් කළා: generics compile-time එකේ check කරලා, bytecode generate කරනකොට type parameters ඉවත් කරනවා (erase). ඒ නිසා `List<String>` සහ `List<Integer>` runtime එකේ **එකම class** (`List`). Type info "මැකෙනවා". මේකෙන් surprising limitations කිහිපයක් එනවා.',
+      },
+      {
+        heading: 'Erasure එකෙන් එන limitations',
+        body: 'Runtime එකේ generic type නොදන්නා නිසා මේවා බෑ:',
+        points: [
+          '`List<String>` සහ `List<Integer>` runtime එකේ එකම — `a.getClass() == b.getClass()` → true.',
+          '`new T()` කරන්න බෑ — T runtime එකේ නෑ (type එකක් instantiate කරන්න බෑ).',
+          '`new T[]` (generic array) කරන්න බෑ.',
+          '`if (obj instanceof List<String>)` කරන්න බෑ — runtime එකේ `<String>` නෑ (raw `List` විතරයි check කරන්න පුළුවන්).',
+        ],
+      },
+      {
+        heading: 'Workaround: Class<T> pass කරන්න',
+        body: 'Runtime එකේ type එක ඕන නම් (reflection, DB mapping), `Class<T>` object එකක් argument විදිහට pass කරලා store කරනවා. Compiler bridge methods + casts automatic දාන නිසා, මේ erasure එක සාමාන්‍ය use වලට invisible.',
       },
     ],
     analogy:
-      'Exam එකේදී calculator පාවිච්චි කරලා, answer sheet එකේ calculator එක පේන්නෙ නෑ වගේ — generics compile time එකේ වැඩ කරලා, runtime bytecode එකේ "නෑ".',
+      'Exam එකකදී calculator පාවිච්චි කරලා (compile-time check), answer sheet එකේ calculator එක පේන්නෙ නෑ (runtime bytecode). Generics compile-time එකේ වැඩ කරලා, runtime එකේ "නැති" වෙනවා — scaffolding එකක් වගේ (building හදලා ඉවත් කරනවා).',
     code: [
       {
         filename: 'Erasure.java',
         language: 'java',
-        code: `List<String> a = new ArrayList<>();
+        code: `List<String>  a = new ArrayList<>();
 List<Integer> b = new ArrayList<>();
-System.out.println(a.getClass() == b.getClass()); // true (both ArrayList)
 
-// these are NOT allowed due to erasure:
-// if (a instanceof List<String>) {}   // compile error
-// T item = new T();                   // compile error`,
-        note: 'Runtime එකේ දෙකම හුදෙක් ArrayList.',
+// runtime එකේ දෙකම එකම class — <String>/<Integer> මැකිලා
+System.out.println(a.getClass() == b.getClass());  // true! (දෙකම ArrayList)
+
+// erasure නිසා මේවා බෑ:
+// if (a instanceof List<String>) {}   //  compile error
+// T item = new T();                   //  compile error
+// T[] arr = new T[10];                //  compile error`,
+        note: 'Runtime එකේ දෙකම හුදෙක් ArrayList — type parameter erased.',
+      },
+      {
+        filename: 'ClassTokenWorkaround.java',
+        language: 'java',
+        code: `// runtime type ඕන නම් Class<T> pass කරලා store කරන්න
+class Repository<T> {
+    private final Class<T> type;         // runtime type token
+
+    Repository(Class<T> type) {
+        this.type = type;                // store කරනවා
+    }
+
+    T fromDb(ResultSet rs) {
+        // type.getName() reflection/mapping වලට use කරන්න පුළුවන්
+        return type.cast(mapRow(rs));
+    }
+    private Object mapRow(ResultSet rs) { return null; }
+}
+
+Repository<Customer> repo = new Repository<>(Customer.class);`,
+        note: 'Class<T> argument = type erasure එකේ practical workaround.',
       },
     ],
     mortar:
-      'Mortar generic `Repository<T>` design කරනකොට, runtime එකේ T නොදන්න නිසා `Class<T>` argument එකක් store කරලා reflection/DB mapping වලට පාවිච්චි කරනවා — type erasure එකේ practical workaround එකක්.',
+      'Mortar generic `Repository<T>` design කරද්දී, runtime එකේ T නොදන්නා නිසා `Class<T>` argument එකක් store කරලා reflection/DB entity mapping වලට use කරනවා (Spring Data JPA එකත් මේ pattern එක). JSON deserialization (`ObjectMapper.readValue(json, Customer.class)`) වගේ තැන් වලත් type erasure නිසා `Class` tokens / `TypeReference` ඕන. මේ දැනුම generic library code ලියද්දී වැදගත්.',
     keyPoints: [
-      'Generics = compile-time; runtime type info erased.',
-      '`new T()`, `T[]`, `instanceof Generic<X>` බෑ.',
-      'Backward compatibility නිසා මේ design එක.',
+      'Generics compile-time only; runtime එකේ type parameters erased.',
+      'Runtime එකේ `List<String>` == `List<Integer>` (එකම class).',
+      '`new T()`, `new T[]`, `instanceof Generic<X>` — බෑ.',
+      'Runtime type ඕන නම් `Class<T>` token pass කරන්න.',
+    ],
+    pitfalls: [
+      'Generic array creation (`new T[]`) බෑ — `(T[]) new Object[n]` + `@SuppressWarnings` හෝ `Object[]` use කරන්න.',
+      'Overloading `method(List<String>)` සහ `method(List<Integer>)` බෑ — erasure නිසා දෙකම එකම signature.',
     ],
   },
 
