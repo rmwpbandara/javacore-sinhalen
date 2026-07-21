@@ -7,183 +7,371 @@ import { Concept } from '../../core/models/roadmap.model';
 export const SECTION_02: Record<string, Concept> = {
   '2.1.1': {
     summary:
-      'Checked exceptions compile-time එකේ handle කරන්නම ඕන; Unchecked (RuntimeException) optional.',
+      'Checked exceptions = compiler එකෙන් **බලෙන්** handle කරන්න කියන ඒවා (`IOException` වගේ — recoverable external problems). Unchecked (`RuntimeException` subclasses) = compiler enforce කරන්නෙ නෑ (බොහෝවිට programming bugs).',
     sinhala: [
       {
+        heading: 'කතාව: fail වෙන්න පුළුවන් දේවල් වර්ග දෙකක්',
+        body: 'Mortar connector එකක් Shopify API එක call කරනවා. මේක fail වෙන්න පුළුවන් ක්‍රම දෙකක් තියෙනවා. (1) network එක වැටිලා — මේක ඔයාගේ වැරැද්දක් නෙවෙයි, expect කරන්න පුළුවන් දෙයක්, retry කරන්න පුළුවන් (recoverable). (2) ඔයාම code එකේ null එකක් access කරලා — මේක bug එකක්, fix කරන්නම ඕන. Java මේ දෙකට වර්ග දෙකක් දෙනවා: checked (external, recoverable) සහ unchecked (bugs). Compiler එක දෙකට වෙනස් විදිහට behave කරනවා.',
+      },
+      {
         heading: 'දෙකේ වෙනස',
-        body: 'Checked exceptions (`IOException`, `SQLException`) compiler එකෙන් enforce කරනවා — `try-catch` හෝ `throws` කරන්නම ඕන. සාමාන්‍යයෙන් recoverable, external problems (network, file). Unchecked exceptions (`RuntimeException` subclasses: `NullPointerException`, `IllegalArgumentException`) compiler එකෙන් enforce කරන්නෙ නෑ — බොහෝවිට programming bugs.',
+        body: 'මූලික වෙනස්කම්:',
+        points: [
+          'Checked (`IOException`, `SQLException`): compiler **බලෙන්** handle කරන්න කියනවා — `try-catch` හෝ `throws` කරන්නම ඕන. සාමාන්‍යයෙන් recoverable, external (network, file, DB).',
+          'Unchecked (`RuntimeException` subclasses — `NullPointerException`, `IllegalArgumentException`, `ArrayIndexOutOfBounds`): compiler enforce කරන්නෙ නෑ. බොහෝවිට programming bugs.',
+          'Checked = `Exception` extend කරනවා (RuntimeException නෙවෙයි); Unchecked = `RuntimeException` extend කරනවා.',
+          'Error (`OutOfMemoryError`) කියන තුන්වෙනි වර්ගයකුත් තියෙනවා — JVM-level, catch කරන්න යන්නෙ නෑ.',
+        ],
+      },
+      {
+        heading: 'කවදා මොකක්ද throw කරන්නේ',
+        body: 'Caller කෙනෙක්ට ඇත්තටම recover වෙන්න පුළුවන් නම් (retry, fallback) → checked. Programming error එකක්, caller ට කරන්න දෙයක් නෑ නම් → unchecked. Modern design එකේ unchecked exceptions වඩාත් common (checked exceptions code එක noisy කරනවා). ඒත් overuse දෙකම නරකයි.',
       },
     ],
     analogy:
-      'Checked = "umbrella අරන් යන්න" කියලා කලින් warn කරන වැස්සක්. Unchecked = හදිසියෙ පය පැටලෙන එක — කලින් declare කරන්නෙ නෑ.',
+      'Checked = "හෙට වැස්සක් එයි, කුඩේ අරන් යන්න" කියලා කලින් warn කරන දෙයක් (ඔයා සූදානම් වෙන්නම ඕන). Unchecked = හදිසියේ පය පැටලිලා වැටෙන එක — කලින් declare කරන්නෙ නෑ, ඒක නොවෙන්න පරෙස්සම් වෙන්නම ඕන (bug එකක්).',
     code: [
       {
-        filename: 'Exceptions.java',
+        filename: 'CheckedException.java',
         language: 'java',
-        code: `// checked: must declare or catch
-List<Customer> fetch(String url) throws IOException {
-    // network call can fail -> recoverable
-    return httpClient.get(url);
+        code: `// CHECKED: network fail වෙන්න පුළුවන් -> compiler handle කරන්න බල කරනවා
+List<Customer> fetch(String url) throws IOException {   // 'throws' declare කරන්නම ඕන
+    return httpClient.get(url);      // recoverable — retry කරන්න පුළුවන්
 }
 
-// unchecked: no declaration needed (usually a bug)
-double avg(int total, int count) {
-    if (count == 0) throw new IllegalArgumentException("count=0");
-    return (double) total / count;
+// caller එකට handle කරන්නම ඕන (නැත්නම් compile error):
+try {
+    fetch("https://shopify...");
+} catch (IOException e) {
+    log.warn("network fail — retry කරමු", e);
 }`,
-        note: 'Recoverable external failures → checked; programmer errors → unchecked.',
+        note: 'Checked exception = try-catch හෝ throws — නැත්නම් compile error.',
+      },
+      {
+        filename: 'UncheckedException.java',
+        language: 'java',
+        code: `// UNCHECKED: programming error -> compiler enforce කරන්නෙ නෑ
+double average(int total, int count) {
+    if (count == 0) {
+        throw new IllegalArgumentException("count 0 වෙන්න බෑ");  // RuntimeException
+    }
+    return (double) total / count;
+}
+// caller try-catch කරන්නම ඕන නෑ — මේක bug එකක්, fix කරන්න ඕන දෙයක්`,
+        note: 'Unchecked = declare/catch කරන්න බල කරන්නෙ නෑ (බොහෝවිට bug).',
       },
     ],
     mortar:
-      'Mortar connector එකක් Shopify API එක call කරනකොට network fail වෙන්න පුළුවන් — `IOException` (checked), retry කරන්න පුළුවන්. Internal validation fail වුනොත් (බඩු config එකක් වැරදි) `IllegalArgumentException` (unchecked) — bug එකක්, fix කරන්න ඕන.',
+      'Mortar connector එකක් Shopify API call කරද්දී network fail → `IOException` (checked) — retry logic එකකින් handle කරනවා. Internal config එකක් වැරදි නම් (batch size negative) → `IllegalArgumentException` (unchecked) — ඒක bug එකක්, fix කරන්නම ඕන. External/recoverable failures checked; internal/programming errors unchecked කියන distinction එකෙන් error handling clean + intentional වෙනවා.',
     keyPoints: [
-      'Checked = compiler enforced, recoverable external issues.',
-      'Unchecked = RuntimeException, usually bugs, no enforcement.',
-      'Over-using checked exceptions = noisy code; balance කරන්න.',
+      'Checked = compiler enforced (try-catch/throws), recoverable external issues.',
+      'Unchecked = `RuntimeException`, enforce කරන්නෙ නෑ, බොහෝවිට bugs.',
+      'Checked = `Exception` extend; Unchecked = `RuntimeException` extend.',
+      'Recoverable → checked; programming error → unchecked.',
+    ],
+    pitfalls: [
+      'Checked exceptions overuse කරොත් code එක `try-catch` වලින් noisy + unreadable — balance කරන්න.',
+      'Exception එකක් catch කරලා නිකම් ignore කරන එක (empty catch block) අනතුරුදායක — අඩුම තරමේ log කරන්න.',
     ],
   },
 
   '2.1.2': {
     summary:
-      'try-catch-finally: try එකේ risky code, catch එකේ handle, finally හැමවිටම run (cleanup).',
+      '`try` = risky code; `catch` = exception එකක් ආවොත් handle; `finally` = exception ආවත් නැතත් **හැමවිටම** run වෙනවා (cleanup වලට). Multiple catch blocks specific → general order එකෙන්.',
     sinhala: [
       {
-        heading: 'Flow එක',
-        body: '`try` block එකේ exception එකක් ආවොත්, matching `catch` එකට යනවා. `finally` block එක exception එකක් ආවත් නැතත්, `return` කලත් හැමවිටම run වෙනවා — resources close කරන්න වගේ cleanup වලට. Multiple catch blocks specific → general order එකෙන් ලියන්න ඕන.',
+        heading: 'කතාව: connection එක close වෙන්නෙ නැති වුනොත්?',
+        body: 'Mortar sync job එකක් DB connection එකක් open කරලා data sync කරනවා. Sync එකේදී exception එකක් ආවොත් — connection එක close වෙන්නෙ නැතුව යනවා (connection leak)! Leaks එකතු වෙලා system එක crash. ඕන වෙන්නේ — exception එකක් ආවත් නැතත් "අන්තිමට connection එක close කරන්නම ඕන" කියන guarantee එකක්. ඒකට තමයි `finally` block එක — try එකේ මොනවා වුනත් finally හැමවිටම run වෙනවා.',
+      },
+      {
+        heading: 'තුනේ role',
+        body: 'try-catch-finally කොටස් තුනේ වැඩ:',
+        points: [
+          '`try` — fail වෙන්න පුළුවන් risky code එක මෙතන දානවා.',
+          '`catch` — try එකේ exception එකක් ආවොත්, matching catch block එකට pipe වෙනවා (handle කරනවා). Specific → general order.',
+          '`finally` — try/catch එකේ මොනවා වුනත් (exception, return, කිසිවක් නැති) **හැමවිටම** run වෙනවා — cleanup (close, release) වලට.',
+          'Flow: try success → finally; try exception → matching catch → finally; catch නැත්නම් → finally → exception propagate.',
+        ],
+      },
+      {
+        heading: 'catch order එක වැදගත්',
+        body: 'Catch blocks කිහිපයක් තියෙනකොට, **specific exceptions මුලින්, general (parent) පස්සේ** ලියන්නම ඕන. `Exception` (general) මුලින් දැම්මොත් — ඊට පස්සේ specific catch එකකට කවදාවත් යන්නෙ නෑ (compile error). Java 7+ එකේ `catch (IOException | SQLException e)` වගේ multi-catch එකකුත් තියෙනවා.',
       },
     ],
     analogy:
-      'Kitchen එකේ ඉවුම: try = උයනවා, catch = පිච්චුනොත් handle කරනවා, finally = ඕන දේ වුනත් gas එක off කරනවා.',
+      'Kitchen එකේ උයනවා වගේ: `try` = උයනවා, `catch` = පිච්චුනොත් handle කරනවා (water දානවා), `finally` = කෑම හරි ගියත් පිච්චුනත් අන්තිමට gas එක off කරනවා + kitchen එක clean කරනවා (හැමවිටම).',
     code: [
       {
-        filename: 'TryCatch.java',
+        filename: 'TryCatchFinally.java',
         language: 'java',
         code: `Connection conn = null;
 try {
-    conn = pool.getConnection();
-    conn.sync();
-} catch (IOException e) {
-    log.error("sync failed", e);       // specific handling
-} catch (Exception e) {
-    log.error("unexpected", e);        // general last
+    conn = pool.getConnection();      // risky
+    conn.sync();                      // risky — exception එකක් එන්න පුළුවන්
+} catch (IOException e) {             // specific එක මුලින්
+    log.error("sync fail", e);
+} catch (Exception e) {              // general එක පස්සේ
+    log.error("unexpected", e);
 } finally {
-    if (conn != null) conn.close();    // always runs (cleanup)
+    if (conn != null) conn.close();  // හැමවිටම run -> connection leak නෑ
 }`,
-        note: 'finally = guaranteed cleanup (connection leak avoid).',
+        note: 'finally = guaranteed cleanup — exception ආවත් නැතත්.',
+      },
+      {
+        filename: 'FinallyAlwaysRuns.java',
+        language: 'java',
+        code: `static int demo() {
+    try {
+        return 1;             // return කරන්න යනවා...
+    } finally {
+        System.out.println("finally run වෙනවා");  // ...ඒත් finally මුලින් run!
+    }
+}
+// output: "finally run වෙනවා", ඊට පස්සේ 1 return වෙනවා`,
+        note: 'return එකකට කලිනුත් finally run වෙනවා.',
+      },
+      {
+        filename: 'MultiCatch.java',
+        language: 'java',
+        code: `try {
+    process();
+} catch (IOException | SQLException e) {   // Java 7+ multi-catch
+    log.error("I/O හෝ DB error", e);       // දෙකටම එකම handling
+}`,
+        note: 'Multi-catch — එකම handling ඕන exceptions කිහිපයකට.',
       },
     ],
     mortar:
-      'Mortar sync jobs DB connections/HTTP streams open කරනවා. `finally` වලින් (හෝ try-with-resources) ඒවා හැමවිටම close වෙනවා — connection leaks නැතුව millions of records safely process කරන්න.',
+      'Mortar sync/enrichment jobs DB connections, HTTP streams, file handles open කරනවා. `finally` (හෝ try-with-resources — 2.1.5) වලින් ඒවා හැමවිටම close වෙනවා — millions of records process කරද්දී exception එකක් ආවත් connection/stream leaks නෑ, system එක stable. Specific catch blocks (IOException vs generic) වලින් network fails retry කරලා, unexpected errors alert කරනවා (10.4).',
     keyPoints: [
-      'finally = හැමවිටම run (cleanup guarantee).',
-      'catch blocks specific → general order.',
-      'finally එකේ `return` දැම්මොත් try එකේ return එක override වෙනවා — avoid.',
+      'try = risky code; catch = handle; finally = හැමවිටම run (cleanup).',
+      'catch blocks specific → general order (parent last).',
+      'finally return/exception ආවත් run වෙනවා — guaranteed cleanup.',
+      'Java 7+ multi-catch: `catch (A | B e)`.',
+    ],
+    pitfalls: [
+      '`finally` block එකේ `return` දැම්මොත් try එකේ return/exception එක silently override වෙනවා — finally එකේ return එපා.',
+      'Empty catch block (exception එක ignore) = silent failures. අඩුම තරමේ log කරන්න.',
     ],
   },
 
   '2.1.3': {
     summary:
-      'throw = exception එකක් actually විසි කරනවා; throws = method එකක් exception එකක් throw කරන්න පුළුවන් කියලා declare කරනවා.',
+      '`throw` = exception object එකක් **ඇත්තටම විසි කරනවා** (statement). `throws` = method එකකින් checked exceptions එන්න පුළුවන් කියලා **declare කරනවා** (method signature clause). වචන දෙකක්, තේරුම් දෙකක්.',
     sinhala: [
       {
-        heading: 'Verb vs declaration',
-        body: '`throw` කියන්නේ statement එකක් — actual exception object එකක් විසි කරනවා (`throw new X()`). `throws` කියන්නේ method signature එකේ clause එකක් — "මේ method එකෙන් මේ checked exceptions එන්න පුළුවන්" කියලා caller ට කියනවා.',
+        heading: 'කතාව: නමින් සමානයි, වැඩෙන් වෙනස්',
+        body: '`throw` සහ `throws` — අකුරු එකයි වගේ ("s" එකයි වෙනස), ඒත් සම්පූර්ණයෙන් වෙනස් දේවල්. බොහෝ beginners මේ දෙක confuse කරනවා. සරලවම: `throw` කියන්නේ **ක්‍රියාවක්** (verb) — exception එකක් දැන් විසි කරනවා. `throws` කියන්නේ **declaration** එකක් — "මේ method එකෙන් මේ exceptions එන්න පුළුවන්, පරෙස්සම් වෙන්න" කියලා caller ට කලින් කියනවා.',
+      },
+      {
+        heading: 'දෙකේ වෙනස',
+        body: 'පැහැදිලිවම:',
+        points: [
+          '`throw` — statement එකක්, method body එක ඇතුලේ. `throw new NotFoundException(id);` — දැන් exception එක raise කරනවා.',
+          '`throws` — method signature එකේ clause එකක්. `... load(String id) throws NotFoundException` — "මේකෙන් මේ exception එක එන්න පුළුවන්" declare කරනවා.',
+          '`throw` එකකින් object එකක් විතරයි විසි කරන්නේ; `throws` එකකින් exception types කිහිපයක් declare කරන්න පුළුවන් (comma-separated).',
+          'Checked exception එකක් `throw` කරනවා නම්, method එක ඒක `throws` කරන්නම ඕන (හෝ ඇතුලේම catch කරන්න).',
+        ],
       },
     ],
     analogy:
-      'throws = "මේ පාරේ ගල් වැටෙන්න පුළුවන්" warning board එක. throw = ඇත්තටම ගලක් වැටෙන එක.',
+      '`throws` = පාරේ "ගල් වැටෙන්න පුළුවන්" කියන warning board එක (කලින් දැනුම් දීම). `throw` = ඇත්තටම ගලක් වැටෙන එක (සිද්ධිය). Board එක තියෙන්නේ ඇත්තටම ගල් වැටෙන්න පුළුවන් නිසා.',
     code: [
       {
-        filename: 'ThrowThrows.java',
+        filename: 'ThrowVsThrows.java',
         language: 'java',
-        code: `// 'throws' declares; 'throw' actually raises
+        code: `// 'throws' -> declaration (signature clause): "මේ exceptions එන්න පුළුවන්"
 Customer load(String id) throws NotFoundException {
     Customer c = repo.find(id);
-    if (c == null) throw new NotFoundException(id); // raise
+    if (c == null) {
+        throw new NotFoundException(id);   // 'throw' -> ක්‍රියාව: දැන් raise කරනවා
+    }
     return c;
 }`,
-        note: 'throws = declaration, throw = action.',
+        note: 'throws = declare (signature); throw = raise (statement).',
+      },
+      {
+        filename: 'CallerMustHandle.java',
+        language: 'java',
+        code: `// 'throws' නිසා caller දන්නවා මේක handle කරන්න ඕන කියලා
+void showCustomer(String id) {
+    try {
+        Customer c = load(id);         // throws NotFoundException
+        System.out.println(c.getEmail());
+    } catch (NotFoundException e) {
+        System.out.println("Customer නෑ: " + id);
+    }
+}`,
+        note: 'throws clause එකෙන් caller ට contract එක පැහැදිලියි.',
       },
     ],
     mortar:
-      'Mortar repository method එකක් `throws NotFoundException` declare කරලා, customer නැත්නම් `throw new NotFoundException(id)` කරනවා. Caller දන්නවා මේක handle කරන්න ඕන කියලා — API contract එක පැහැදිලියි.',
+      'Mortar repository method එකක් `throws NotFoundException` declare කරලා, customer නැත්නම් `throw new NotFoundException(id)` කරනවා. `throws` clause එකෙන් API contract එක පැහැදිලියි — caller දන්නවා මේක handle කරන්නම ඕන කියලා (compile-time enforced). Controller layer එකේ මේක catch කරලා 404 response එකක් දෙනවා (7.2.5).',
     keyPoints: [
-      'throw = raise an exception (statement).',
-      'throws = declare possible checked exceptions (signature).',
-      'One method can `throws` many, but each `throw` raises one.',
+      '`throw` = exception object එකක් raise කරනවා (statement).',
+      '`throws` = possible checked exceptions declare කරනවා (signature).',
+      'Checked exception `throw` කරනවා නම් method එක `throws` කරන්නම ඕන.',
+      'One method `throws` many; each `throw` raises one.',
+    ],
+    pitfalls: [
+      '`throw` සහ `throws` confuse කරන එක common beginner mistake — throw=verb, throws=declaration.',
+      '`throw null;` කරන්න එපා — NullPointerException එකක් එනවා (exception object එකක්ම throw කරන්න).',
     ],
   },
 
   '2.1.4': {
     summary:
-      'Custom exceptions = domain-specific errors represent කරන්න තමන්ගේ exception classes හදන එක.',
+      'Custom exceptions = generic `Exception` වෙනුවට domain-specific error classes හදන එක (`ConnectorAuthException` වගේ). Code readable, error handling precise, extra context (fields) carry කරන්න පුළුවන්.',
     sinhala: [
       {
-        heading: 'ඇයි custom?',
-        body: 'Generic `Exception` වෙනුවට domain-specific exception එකක් (`ConnectorAuthException`) හැදුවම — code එක readable, error handling precise, extra context (fields) carry කරන්න පුළුවන්. `Exception` extend කලොත් checked; `RuntimeException` extend කලොත් unchecked.',
+        heading: 'කතාව: "Exception: something went wrong" ප්‍රමාණවත් නෑ',
+        body: 'Mortar connector එකක් fail වුනාම generic `throw new Exception("error")` දැම්මොත් — logs එකේ "error" කියලා විතරයි පේන්නේ. කුමන brand එකද, කුමන platform එකද, ඇයි fail වුනේද? කිසිවක් නෑ. Debugging අමාරුයි, specific handling කරන්නත් බෑ. ඕන වෙන්නේ — problem එක exactly represent කරන, extra context carry කරන, තමන්ගේම exception type එකක්. ඒකට තමයි custom exceptions.',
+      },
+      {
+        heading: 'කොහොමද හදන්නේ + ඇයි',
+        body: 'Custom exception එකක් හදන විදිහ සහ වාසි:',
+        points: [
+          '`Exception` extend කරොත් → checked (caller handle කරන්නම ඕන). `RuntimeException` extend කරොත් → unchecked.',
+          'Extra fields දාන්න පුළුවන් (platform, brandId, retryable flag) — error එකට context carry කරන්න.',
+          'Readable code: `catch (ConnectorAuthException e)` කියන එක `catch (Exception e)` වලට වඩා පැහැදිලියි.',
+          'Precise handling: වෙන වෙන custom exceptions වලට වෙන වෙන handling (auth error → re-auth; quota error → wait).',
+        ],
       },
     ],
     analogy:
-      '"Error 1" කියනවා වෙනුවට "Shopify token expired" කියන specific message එකක් වගේ — problem එක වහාම තේරෙනවා.',
+      'Doctor කෙනෙක් "ඔයා ලෙඩයි" කියනවා වෙනුවට "ඔයාට Type-2 diabetes, sugar 180" කියනවා වගේ — specific diagnosis එකෙන් හරි treatment එක දෙන්න පුළුවන්. Generic Exception = "something wrong"; custom exception = exact problem + context.',
     code: [
       {
         filename: 'ConnectorAuthException.java',
         language: 'java',
-        code: `public class ConnectorAuthException extends RuntimeException {
-    private final String platform;
+        code: `// custom unchecked exception — extra context එක්ක
+public class ConnectorAuthException extends RuntimeException {
+    private final String platform;      // extra context
+    private final String brandId;
 
-    public ConnectorAuthException(String platform, String msg) {
-        super(msg);
-        this.platform = platform;   // extra context
+    public ConnectorAuthException(String platform, String brandId, String msg) {
+        super(msg);                     // parent (message) constructor
+        this.platform = platform;
+        this.brandId = brandId;
     }
+
     public String getPlatform() { return platform; }
+    public String getBrandId()  { return brandId; }
+}`,
+        note: 'Extra fields (platform, brandId) error context carry කරනවා.',
+      },
+      {
+        filename: 'UsingCustomException.java',
+        language: 'java',
+        code: `void authenticate(String platform, String brandId) {
+    if (tokenExpired()) {
+        // rich, actionable error
+        throw new ConnectorAuthException(platform, brandId, "OAuth token expired");
+    }
 }
 
-// usage
-throw new ConnectorAuthException("shopify", "OAuth token expired");`,
-        note: 'Extra field (platform) එකෙන් error context carry කරනවා.',
+// precise handling
+try {
+    authenticate("shopify", "brand-42");
+} catch (ConnectorAuthException e) {
+    log.error("Auth fail: {} / {}", e.getPlatform(), e.getBrandId());
+    reAuthenticate(e.getPlatform(), e.getBrandId());   // specific recovery
+}`,
+        note: 'Custom exception → precise handling + rich logs.',
       },
     ],
     mortar:
-      'Mortar එකේ `ConnectorAuthException`, `IdentityResolutionException`, `SyncQuotaException` වගේ custom exceptions — proactive error alerts (10.4) වලට precise, actionable messages දෙනවා. "brand X, platform Shopify, token expired" වගේ.',
+      'Mortar එකේ `ConnectorAuthException`, `IdentityResolutionException`, `SyncQuotaExceededException` වගේ custom exceptions — proactive error alerts (PROJECT_IDEA 10.4) වලට precise, actionable messages ("brand-42, Shopify, token expired") දෙනවා. Extra context fields නිසා support team එකට exactly මොකද වුනේ කියලා පේනවා, auto-recovery logic (re-auth, back-off) trigger කරන්නත් පුළුවන්.',
     keyPoints: [
-      'Domain-specific exceptions = readable + precise handling.',
-      'Extend `Exception` (checked) හෝ `RuntimeException` (unchecked).',
-      'Extra fields වලින් error context carry කරන්න.',
+      'Domain-specific exception classes = readable + precise handling.',
+      '`Exception` extend → checked; `RuntimeException` extend → unchecked.',
+      'Extra fields වලින් error context (platform, brandId) carry කරන්න.',
+      'Constructor එකේ `super(message)` (+ optionally `super(message, cause)`) call කරන්න.',
+    ],
+    pitfalls: [
+      'Custom exception එකක cause (original exception) එක `super(msg, cause)` වලින් pass කරන්න අමතක කරන්න එපා — නැත්නම් root-cause stack trace නැති වෙනවා.',
+      'Exception classes ගොඩක් අනවශ්‍යව හදන්න එපා — meaningful, distinct error categories වලට විතරයි.',
     ],
   },
 
   '2.1.5': {
     summary:
-      'Try-with-resources = AutoCloseable resources automatic close කරන syntax එකක් (Java 7+).',
+      'Try-with-resources (Java 7+) = `try (Resource r = ...)` syntax එකෙන් `AutoCloseable` resources **automatic close** කරනවා — block එක ඉවර වුනාම (exception ආවත්). finally boilerplate නැති කරලා resource leaks වළක්වනවා.',
     sinhala: [
       {
-        heading: 'Auto cleanup',
-        body: '`try (Resource r = ...) { }` වලින්, block එක ඉවර වුනාම (exception ආවත්) `r.close()` automatically call වෙනවා. Resource එක `AutoCloseable` implement කරන්නම ඕන. finally boilerplate නැති කරනවා, resource leaks වළක්වනවා.',
+        heading: 'කතාව: finally boilerplate එකෙන් මිදෙමු',
+        body: '2.1.2 එකේ අපි දැක්කා finally එකෙන් connection close කරන එක. ඒත් resources කිහිපයක් (file + connection + stream) තියෙනකොට finally block එක null-checks වලින් පිරිලා, ugly + error-prone වෙනවා. Java 7 මේකට ලස්සන විසඳුමක් දුන්නා — `try (...)` ඇතුලේ resource එක declare කරොත්, block එක ඉවර වෙනකොට Java **automatic close කරනවා**. finally ලියන්නම ඕන නෑ.',
+      },
+      {
+        heading: 'කොහොමද වැඩ කරන්නේ',
+        body: 'Try-with-resources rules:',
+        points: [
+          'Resource එක `AutoCloseable` (හෝ `Closeable`) implement කරන්නම ඕන — `close()` method එකක් තියෙන්නම ඕන.',
+          '`try (Resource r = new Resource())` — resource එක parentheses ඇතුලේ declare කරනවා.',
+          'Block එක ඉවර වෙනකොට (success හෝ exception) Java automatic `r.close()` call කරනවා.',
+          'Resources කිහිපයක් — semicolon වලින් වෙන් කරලා; close වෙන්නේ **reverse order** එකෙන් (declare කරපු ඇණවුමට විරුද්ධව).',
+        ],
       },
     ],
     analogy:
-      'Sensor-tap එකක් වගේ — අත ගත්තම automatic වතුර නවතිනවා. Manually off කරන්න ඕන නෑ.',
+      'Sensor-tap එකක් වගේ — අත ගත්තම වතුර automatic නවතිනවා (manually off කරන්න ඕන නෑ). Try-with-resources = block එකෙන් අත ගත්තම resource එක automatic close. Manual finally = පරණ tap එක (off කරන්න අමතක වුනොත් වතුර නාස්තියි = leak).',
     code: [
       {
         filename: 'TryWithResources.java',
         language: 'java',
-        code: `// stream auto-closes even if an exception occurs
+        code: `// stream එක automatic close වෙනවා — exception ආවත්
 try (var reader = Files.newBufferedReader(uploadPath)) {
     reader.lines().forEach(this::processRow);
 } catch (IOException e) {
-    log.error("upload read failed", e);
+    log.error("upload read fail", e);
 }
-// no finally needed - reader.close() called automatically`,
-        note: 'AutoCloseable resources block ඉවර වුනාම auto close.',
+// finally { reader.close(); } ලියන්න ඕන නෑ — auto close!`,
+        note: 'AutoCloseable resource block ඉවර වුනාම automatic close.',
+      },
+      {
+        filename: 'MultipleResources.java',
+        language: 'java',
+        code: `// resources කිහිපයක් — reverse order එකෙන් close වෙනවා
+try (Connection conn = pool.getConnection();
+     PreparedStatement stmt = conn.prepareStatement(sql);
+     ResultSet rs = stmt.executeQuery()) {
+
+    while (rs.next()) process(rs);
+
+}   // close order: rs -> stmt -> conn (reverse of declaration)
+// exception ආවත් තුනම safely close වෙනවා`,
+        note: 'Multiple resources — reverse order එකෙන් auto close.',
+      },
+      {
+        filename: 'CustomAutoCloseable.java',
+        language: 'java',
+        code: `// ඔයාගේම class එකකුත් AutoCloseable කරන්න පුළුවන්
+class SyncSession implements AutoCloseable {
+    SyncSession() { System.out.println("session open"); }
+
+    @Override
+    public void close() {                 // block ඉවර වෙනකොට auto call
+        System.out.println("session close (auto)");
+    }
+}
+
+try (SyncSession s = new SyncSession()) {
+    // work...
+}   // -> "session close (auto)" automatic`,
+        note: 'AutoCloseable implement කරලා ඕන class එකක් try-with-resources වලට දාන්න පුළුවන්.',
       },
     ],
     mortar:
-      'Mortar CSV upload pipeline එකේ file streams, DB connections try-with-resources වලින් open කරනවා. Huge files process කරනකොට error ආවත් streams leak වෙන්නෙ නෑ — data lake ingestion එක stable.',
+      'Mortar CSV upload pipeline එකේ file streams, DB connections, Kafka producers try-with-resources වලින් open කරනවා. Huge files / millions of rows process කරද්දී error එකක් ආවත් streams/connections leak වෙන්නෙ නෑ — data lake ingestion (PROJECT_IDEA 1.3) stable, resource-safe. finally boilerplate නැති නිසා code එකත් clean.',
     keyPoints: [
-      'Resource `AutoCloseable` වෙන්නම ඕන.',
-      'Block exit වෙනකොට reverse order එකෙන් close.',
-      'finally boilerplate නැති කරලා leaks වළක්වනවා.',
+      'Resource `AutoCloseable` (`close()` method) වෙන්නම ඕන.',
+      '`try (r = ...)` — block exit වෙනකොට auto `close()` (exception ආවත්).',
+      'Resources කිහිපයක් reverse order එකෙන් close වෙනවා.',
+      'finally boilerplate නැති කරලා resource leaks වළක්වනවා.',
+    ],
+    pitfalls: [
+      'Resource එක try-parentheses ඇතුලේ declare කරන්නම ඕන — පිටත declare කරලා try එකට දැම්මොත් auto-close වෙන්නෙ නෑ.',
+      'AutoCloseable නැති දෙයක් (plain object) try-with-resources වලට දාන්න බෑ — compile error.',
     ],
   },
 
