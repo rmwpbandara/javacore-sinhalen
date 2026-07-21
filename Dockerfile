@@ -5,7 +5,10 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+# npm install (not `npm ci`): the lockfile is generated with npm 11 on macOS and
+# omits some platform-optional native deps (@emnapi/*), which strict `npm ci`
+# rejects on Linux. `npm install` resolves them for the build platform.
+RUN npm install --no-audit --no-fund --loglevel=error
 COPY . .
 RUN npm run build
 
