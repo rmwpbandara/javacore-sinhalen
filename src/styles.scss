@@ -1,0 +1,128 @@
+/* ============================================================
+   JavaCore සිංහලෙන් — global design system
+   Dark theme, coffee/amber + violet accents (Java + Sinhala warmth)
+   ============================================================ */
+
+:root {
+  --bg: #0d0b09;
+  --surface: #17130f;
+  --surface-2: #211b15;
+  --border: #2e2620;
+  --text: #f4ede3;
+  --text-2: #cdc3b6;
+  --muted: #8b8175;
+  --accent: #f0a04b; /* amber / coffee */
+  --violet: #a78bfa;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --sans: 'Inter', 'Noto Sans Sinhala', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+/* Sinhala text gets slightly more line-height for legibility */
+[lang='si'] {
+  font-family: 'Noto Sans Sinhala', var(--sans);
+  line-height: 1.9;
+}
+
+a { color: inherit; }
+
+::selection { background: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+/* scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ---------- code block ---------- */
+.code {
+  margin: 1.2rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0a0806;
+}
+.code__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+}
+.code__dots { display: flex; gap: 0.32rem; }
+.code__dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.code__dots i:nth-child(1) { background: #e06c5b; }
+.code__dots i:nth-child(2) { background: #e0b44f; }
+.code__dots i:nth-child(3) { background: #7bbf6a; }
+.code__file { font-family: var(--mono); color: var(--text-2); }
+.code__lang {
+  font-family: var(--mono);
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+.code__copy {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-family: var(--mono);
+}
+.code__copy:hover { border-color: var(--accent); color: var(--accent); }
+.code__pre {
+  margin: 0;
+  padding: 1.1rem 1.2rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+.code__pre code { font-family: var(--mono); background: none; }
+.code__note {
+  padding: 0.65rem 1.2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-2);
+  background: var(--surface);
+}
+
+/* ---------- highlight.js theme (custom, amber/violet) ---------- */
+.hljs { color: #e6ddd0; background: transparent; }
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal { color: #f0a04b; }
+.hljs-string,
+.hljs-attr { color: #9ecb78; }
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_ { color: #a78bfa; }
+.hljs-number,
+.hljs-symbol { color: #e0b44f; }
+.hljs-comment,
+.hljs-quote { color: #6b6157; font-style: italic; }
+.hljs-type,
+.hljs-built_in { color: #6fb0c9; }
+.hljs-meta { color: #d98cff; }
+.hljs-variable,
+.hljs-name { color: #e6ddd0; }
+.hljs-punctuation,
+.hljs-operator { color: #b4a99b; }

@@ -1,0 +1,126 @@
+@if (node(); as n) {
+  <article class="concept">
+    <!-- breadcrumb + level badges -->
+    <nav class="concept__crumbs">
+      @for (crumb of breadcrumb(); track crumb) {
+        <span class="crumb">{{ crumb }}</span>
+        <span class="crumb-sep">›</span>
+      }
+      <span class="crumb crumb--current">{{ n.title }}</span>
+    </nav>
+
+    <header class="concept__head">
+      <div class="concept__badges">
+        @for (lvl of levels(); track $index) {
+          <span class="badge" [class.badge--last]="$index === levels().length - 1">{{ lvl }}</span>
+        }
+        <span class="badge badge--type">{{ levelLabel() }}</span>
+      </div>
+      <h1 class="concept__title">{{ n.title }}</h1>
+
+      @if (n.concept) {
+        <p class="concept__summary">{{ n.concept.summary }}</p>
+      }
+    </header>
+
+    @if (n.concept; as c) {
+      <!-- Sinhala explanation cards -->
+      <section class="blocks">
+        @for (block of c.sinhala; track block.heading) {
+          <div class="block">
+            <h3 class="block__h">{{ block.heading }}</h3>
+            <p class="block__body" lang="si">{{ block.body }}</p>
+          </div>
+        }
+      </section>
+
+      @if (c.analogy) {
+        <aside class="analogy">
+          <span class="analogy__tag">සරල උදාහරණය · Analogy</span>
+          <p lang="si">{{ c.analogy }}</p>
+        </aside>
+      }
+
+      <!-- code examples -->
+      <section class="code-section">
+        <h2 class="section-h"><span class="section-h__icon">&lt;/&gt;</span> Coding Example</h2>
+        @for (ex of c.code; track ex.filename) {
+          <jcs-code-block [example]="ex" />
+        }
+      </section>
+
+      <!-- Mortar real-world callout -->
+      <aside class="mortar">
+        <div class="mortar__head">
+          <span class="mortar__logo">▚ Mortar</span>
+          <span class="mortar__tag">Real-World Usage · ඇත්ත project එකේදී</span>
+        </div>
+        <p class="mortar__body" lang="si">{{ c.mortar }}</p>
+      </aside>
+
+      <!-- key points -->
+      <section class="points">
+        <h2 class="section-h"><span class="section-h__icon">★</span> Key Takeaways</h2>
+        <ul class="points__list">
+          @for (kp of c.keyPoints; track kp) {
+            <li lang="si">{{ kp }}</li>
+          }
+        </ul>
+      </section>
+
+      @if (c.pitfalls?.length) {
+        <section class="pitfalls">
+          <h2 class="section-h"><span class="section-h__icon">⚠</span> Common Pitfalls</h2>
+          <ul class="pitfalls__list">
+            @for (p of c.pitfalls; track p) {
+              <li lang="si">{{ p }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <!-- mark complete -->
+      <div class="complete">
+        <button class="complete__btn" [class.complete__btn--done]="done()" (click)="toggleDone()">
+          {{ done() ? '✓ Completed' : 'Mark as Complete' }}
+        </button>
+      </div>
+    } @else {
+      <!-- content-in-progress placeholder (still shows the mapping intent) -->
+      <section class="wip">
+        <div class="wip__icon">✍️</div>
+        <h2>මේ concept එකේ සම්පූර්ණ content එක ලියමින් පවතී</h2>
+        <p>
+          This concept is part of the roadmap and its full bilingual explanation, code example, and
+          Mortar real-world story are being authored. The navigation, structure, and Mortar mapping
+          are already wired in.
+        </p>
+        <p class="wip__num">Roadmap #{{ n.number }} — {{ n.title }}</p>
+      </section>
+    }
+
+    <!-- prev / next -->
+    <nav class="pager">
+      @if (siblings().prev; as prev) {
+        <a class="pager__link pager__link--prev" [routerLink]="['/learn', prev.slug]">
+          <span class="pager__dir">← Previous</span>
+          <span class="pager__title">{{ prev.number }} · {{ prev.title }}</span>
+        </a>
+      } @else {
+        <span></span>
+      }
+      @if (siblings().next; as next) {
+        <a class="pager__link pager__link--next" [routerLink]="['/learn', next.slug]">
+          <span class="pager__dir">Next →</span>
+          <span class="pager__title">{{ next.number }} · {{ next.title }}</span>
+        </a>
+      }
+    </nav>
+  </article>
+} @else {
+  <div class="notfound">
+    <h1>404</h1>
+    <p>මේ concept එක හමු නොවුණා. This concept could not be found.</p>
+    <a routerLink="/">← Back to Home</a>
+  </div>
+}

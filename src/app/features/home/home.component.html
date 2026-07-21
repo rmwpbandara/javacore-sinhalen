@@ -1,0 +1,81 @@
+<div class="home">
+  <!-- hero -->
+  <header class="hero">
+    <div class="hero__glow"></div>
+    <p class="hero__eyebrow">Java + Spring Boot · සිංහලෙන් · with one real project</p>
+    <h1 class="hero__title">
+      Master <span class="grad">Core Java</span> by building
+      <span class="grad grad--2">Mortar</span>
+    </h1>
+    <p class="hero__lede" lang="si">
+      සම්පූර්ණ Java + Spring Boot roadmap එක, concept එකින් එකට — හැම එකක්ම
+      <b>සිංහලෙන් පැහැදිලි කරලා</b>, coding example එකක් එක්ක, සහ ඇත්ත AI Customer Data
+      Platform එකක් (<b>Mortar</b>) හදන කතාවකින් real-world usage පෙන්නලා.
+    </p>
+
+    <div class="hero__cta">
+      <a class="btn btn--primary" [routerLink]="['/learn', firstSlug]">Start from 1.1.1 →</a>
+      @if (lastSlug()) {
+        <a class="btn btn--ghost" [routerLink]="['/learn', lastSlug()]">Resume last concept</a>
+      }
+    </div>
+
+    <div class="hero__stats">
+      <div class="stat">
+        <span class="stat__num">{{ totalConcepts }}</span>
+        <span class="stat__label">Concepts</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num">11</span>
+        <span class="stat__label">Sections</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num">5</span>
+        <span class="stat__label">Levels deep</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num">{{ overallPct() }}%</span>
+        <span class="stat__label">You done</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- how it works -->
+  <section class="how">
+    <h2 class="home__h">How each page works</h2>
+    <div class="how__grid">
+      <div class="how__card"><span class="how__ico">📖</span><h3>Sinhala explanation</h3><p>Concept එක සිංහලෙන් + English technical words මිශ්‍රව, සරල analogy එකක් එක්ක.</p></div>
+      <div class="how__card"><span class="how__ico">&lt;/&gt;</span><h3>Coding example</h3><p>හැම concept එකකටම syntax-highlighted Java code example එකක්, copy කරන්න පුළුවන්.</p></div>
+      <div class="how__card"><span class="how__ico">▚</span><h3>Mortar real-world</h3><p>ඒ concept එක ඇත්තටම Mortar CDP එකේ කොහොම use වෙනවද කියලා එකම කතාවකින්.</p></div>
+      <div class="how__card"><span class="how__ico">★</span><h3>Key points + pitfalls</h3><p>Takeaways සහ interview traps — මතක තියාගන්න සහ වැරදි වළක්වන්න.</p></div>
+    </div>
+  </section>
+
+  <!-- sections -->
+  <section class="sections">
+    <h2 class="home__h">The Roadmap — 11 Sections</h2>
+    <div class="sections__grid">
+      @for (card of cards(); track card.node.number) {
+        <a class="scard" [routerLink]="['/learn', firstLeafSlugOf(card.node)]">
+          <div class="scard__top">
+            <span class="scard__icon">{{ card.icon }}</span>
+            <span class="scard__num">{{ card.node.number }}</span>
+          </div>
+          <h3 class="scard__title">{{ card.node.title }}</h3>
+          <div class="scard__meta">
+            <span>{{ card.done }}/{{ card.leaves }} concepts</span>
+            <span class="scard__pct">{{ card.pct }}%</span>
+          </div>
+          <div class="scard__bar"><div class="scard__bar-fill" [style.width.%]="card.pct"></div></div>
+        </a>
+      }
+    </div>
+  </section>
+
+  <footer class="home__foot">
+    <p lang="si">
+      Goal එක: Java concept එකින් එකට, සිංහලෙන්, ඇත්ත project එකක් හදන ගමන් ඉගෙනගන්න.
+    </p>
+    <p class="home__foot-sub">Built with Angular · content authored bilingual (සිංහල + English)</p>
+  </footer>
+</div>
